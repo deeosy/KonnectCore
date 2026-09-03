@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import toast from 'react-hot-toast'
 import api from '../services/api'
 import PageHeader from '../components/ui/PageHeader'
 import Button from '../components/ui/Button'
@@ -50,6 +51,10 @@ function FormSection({ title, children, delay = 0 }) {
 
 export default function MemberNew() {
   const navigate = useNavigate()
+  const { id } = useParams()
+  const location = useLocation()
+  const editId = id || new URLSearchParams(location.search).get('id')
+  const isEdit = Boolean(editId)
   const [form, setForm] = useState(emptyForm)
   const [photo, setPhoto] = useState(null)
   const [groups, setGroups] = useState([])
@@ -60,7 +65,34 @@ export default function MemberNew() {
   useEffect(() => {
     api.get('/groups').then(({ data }) => setGroups(data.data)).catch(() => {})
     api.get('/users').then(({ data }) => setOfficers(data.data)).catch(() => {})
-  }, [])
+    if (editId) {
+      api.get(`/members/${editId}`).then(({ data }) => {
+        const m = data.data
+        setForm({
+          firstName: m.firstName || '',
+          lastName: m.lastName || '',
+          phone: m.phone || '',
+          membershipNumber: m.membershipNumber || '',
+          idType: m.idType || 'national_id',
+          idNumber: m.idNumber || '',
+          location: m.location || '',
+          region: m.region || '',
+          district: m.district || '',
+          gpsLat: m.gpsLat || '',
+          gpsLng: m.gpsLng || '',
+          farmSize: m.farmSize || '',
+          mainCrops: m.mainCrops || [],
+          groupId: m.groupId?._id || m.groupId || '',
+          assignedOfficerId: m.assignedOfficerId?._id || m.assignedOfficerId || '',
+          status: m.status || 'active',
+          notes: m.notes || '',
+        })
+      }).catch(() => {
+        toast.error('Failed to load member')
+        navigate('/members')
+      })
+    }
+  }, [editId, navigate])
 
   const set = (key, value) => setForm((f) => ({ ...f, [key]: value }))
 
@@ -85,12 +117,15 @@ export default function MemberNew() {
     })
     if (photo) fd.append('photo', photo)
     try {
-      const { data } = await api.post('/members', fd, {
+      const url = isEdit ? `/members/${editId}` : '/members'
+      const method = isEdit ? 'put' : 'post'
+      const { data } = await api[method](url, fd, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
+      toast.success(isEdit ? 'Member updated' : 'Member registered')
       navigate(`/members/${data.data._id}`)
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create member')
+      setError(err.response?.data?.message || 'Failed to save member')
     } finally {
       setSaving(false)
     }
@@ -99,10 +134,10 @@ export default function MemberNew() {
   return (
     <div>
       <PageHeader
-        title="Register Member"
-        subtitle="Add a new member to your organisation"
+        title={isEdit ? 'Edit Member' : 'Register Member'}
+        subtitle={isEdit ? 'Update member information' : 'Add a new member to your organisation'}
         action={
-          <Button variant="outline" onClick={() => navigate('/members')}>
+          <Button variant="outline" onClick={() => navigate(isEdit ? `/members/${editId}` : '/members')}>
             Cancel
           </Button>
         }
@@ -188,11 +223,11 @@ export default function MemberNew() {
         )}
 
         <div className="flex justify-end gap-3">
-          <Button variant="outline" onClick={() => navigate('/members')}>
+          <Button type="button" variant="outline" onClick={() => navigate(isEdit ? `/members/${editId}` : '/members')}>
             Cancel
           </Button>
           <Button type="submit" loading={saving}>
-            {saving ? 'Saving...' : 'Register Member'}
+            {saving ? 'Saving...' : isEdit ? 'Update Member' : 'Register Member'}
           </Button>
         </div>
       </form>

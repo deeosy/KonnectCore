@@ -10,7 +10,7 @@ const generateToken = (id) => {
 
 export const register = async (req, res, next) => {
   try {
-    const { name, email, password, phone, role } = req.body
+    const { name, email, password, phone } = req.body
 
     const existing = await User.findOne({ email })
     if (existing) {
@@ -22,7 +22,7 @@ export const register = async (req, res, next) => {
       email,
       password,
       phone,
-      role: role || 'fieldOfficer',
+      role: 'fieldOfficer',
     })
 
     res.status(201).json({

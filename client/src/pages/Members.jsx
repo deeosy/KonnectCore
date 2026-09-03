@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Upload, Download, ChevronLeft, ChevronRight } from 'lucide-react'
+import toast from 'react-hot-toast'
 import api from '../services/api'
 import PageHeader from '../components/ui/PageHeader'
 import Button from '../components/ui/Button'
@@ -12,6 +13,15 @@ import Avatar from '../components/ui/Avatar'
 import EmptyState from '../components/ui/EmptyState'
 import { MEMBER_STATUSES, CROPS } from '../utils/constants'
 
+function useDebounce(value, delay) {
+  const [debouncedValue, setDebouncedValue] = useState(value)
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedValue(value), delay)
+    return () => clearTimeout(timer)
+  }, [value, delay])
+  return debouncedValue
+}
+
 export default function Members() {
   const navigate = useNavigate()
   const [members, setMembers] = useState([])
@@ -20,6 +30,7 @@ export default function Members() {
   const [totalPages, setTotalPages] = useState(1)
   const [total, setTotal] = useState(0)
   const [filters, setFilters] = useState({ search: '', status: '', crop: '', location: '' })
+  const debouncedSearch = useDebounce(filters.search, 300)
 
   const loadMembers = useCallback(async () => {
     setLoading(true)
@@ -28,6 +39,7 @@ export default function Members() {
       Object.entries(filters).forEach(([k, v]) => {
         if (v) params.set(k, v)
       })
+      params.set('search', debouncedSearch)
       const { data } = await api.get(`/members?${params.toString()}`)
       setMembers(data.data)
       setTotal(data.total)
@@ -37,7 +49,7 @@ export default function Members() {
     } finally {
       setLoading(false)
     }
-  }, [page, filters])
+  }, [page, debouncedSearch, filters])
 
   useEffect(() => {
     loadMembers()
@@ -48,10 +60,22 @@ export default function Members() {
     setFilters((f) => ({ ...f, [key]: value }))
   }
 
-  const handleExport = () => {
+  const handleExport = async () => {
     const params = new URLSearchParams()
     Object.entries(filters).forEach(([k, v]) => v && params.set(k, v))
-    window.open(`/api/members/export?${params.toString()}`, '_blank')
+    try {
+      const { data } = await api.get(`/members/export?${params.toString()}`, { responseType: 'blob' })
+      const url = window.URL.createObjectURL(new Blob([data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', 'members.xlsx')
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch {
+      toast.error('Export failed')
+    }
   }
 
   return (
@@ -74,14 +98,14 @@ export default function Members() {
                   if (!file) return
                   const fd = new FormData()
                   fd.append('file', file)
-                  fd.append('organisationId', '')
                   try {
                     await api.post('/members/import', fd, {
                       headers: { 'Content-Type': 'multipart/form-data' },
                     })
+                    toast.success('Members imported successfully')
                     loadMembers()
                   } catch (err) {
-                    alert(err.response?.data?.message || 'Import failed')
+                    toast.error(err.response?.data?.message || 'Import failed')
                   }
                 }
                 input.click()

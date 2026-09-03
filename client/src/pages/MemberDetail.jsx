@@ -13,6 +13,7 @@ import {
   Wallet,
   HandCoins,
 } from 'lucide-react'
+import toast from 'react-hot-toast'
 import api from '../services/api'
 import Button from '../components/ui/Button'
 import Badge from '../components/ui/Badge'
@@ -118,7 +119,7 @@ export default function MemberDetail() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm">Edit</Button>
+          <Button variant="outline" size="sm" onClick={() => navigate(`/members/${member._id}/edit`)}>Edit</Button>
           <Button size="sm" onClick={() => setCollectionOpen(true)}>Record Collection</Button>
         </div>
       </div>
@@ -158,11 +159,11 @@ export default function MemberDetail() {
         {tab === 'overview' && (
           <OverviewTab member={member} farm={farm} history={history} />
         )}
-        {tab === 'farm' && <FarmTab member={member} farm={farm} />}
+        {tab === 'farm' && <FarmTab member={member} farm={farm} onRefresh={load} />}
         {tab === 'collections' && <CollectionsTab collections={history?.collections || []} />}
         {tab === 'payments' && <PaymentsTab payments={history?.payments || []} />}
         {tab === 'loans' && <LoansTab loans={history?.loans || []} />}
-        {tab === 'documents' && <DocumentsTab member={member} />}
+        {tab === 'documents' && <DocumentsTab member={member} onRefresh={load} />}
       </Card>
 
       <CollectionModal
@@ -205,7 +206,7 @@ function OverviewTab({ member, farm, history }) {
       </div>
       <div>
         <h3 className="mb-3 text-base font-bold text-dark">Timeline</h3>
-        {!history || history.timeline.length === 0 ? (
+        {!history || !history.timeline || history.timeline.length === 0 ? (
           <p className="text-sm text-muted">No activity yet</p>
         ) : (
           <ul className="space-y-3">
@@ -226,7 +227,7 @@ function OverviewTab({ member, farm, history }) {
   )
 }
 
-function FarmTab({ member, farm }) {
+function FarmTab({ member, farm, onRefresh }) {
   const [open, setOpen] = useState(false)
   const crops = farm?.crops || []
   return (
@@ -258,12 +259,12 @@ function FarmTab({ member, farm }) {
           ))}
         </div>
       )}
-      <AddCropModal open={open} onClose={() => setOpen(false)} memberId={member._id} />
+      <AddCropModal open={open} onClose={() => setOpen(false)} memberId={member._id} onRefresh={onRefresh} />
     </div>
   )
 }
 
-function AddCropModal({ open, onClose, memberId }) {
+function AddCropModal({ open, onClose, memberId, onRefresh }) {
   const [form, setForm] = useState({ cropName: '', variety: '', areaHectares: '', season: '', estimatedYield: '' })
   const [saving, setSaving] = useState(false)
 
@@ -272,10 +273,11 @@ function AddCropModal({ open, onClose, memberId }) {
     setSaving(true)
     try {
       await api.post(`/farms/member/${memberId}/crops`, form)
+      toast.success('Crop added')
       onClose()
-      window.location.reload()
+      if (onRefresh) onRefresh()
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to add crop')
+      toast.error(err.response?.data?.message || 'Failed to add crop')
     } finally {
       setSaving(false)
     }
@@ -405,7 +407,7 @@ function LoansTab({ loans }) {
   )
 }
 
-function DocumentsTab({ member }) {
+function DocumentsTab({ member, onRefresh }) {
   const [uploading, setUploading] = useState(false)
 
   const handleUpload = async (e) => {
@@ -419,9 +421,10 @@ function DocumentsTab({ member }) {
       await api.post(`/members/${member._id}/documents`, fd, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
-      window.location.reload()
+      toast.success('Document uploaded')
+      if (onRefresh) onRefresh()
     } catch (err) {
-      alert(err.response?.data?.message || 'Upload failed')
+      toast.error(err.response?.data?.message || 'Upload failed')
     } finally {
       setUploading(false)
     }
@@ -477,9 +480,10 @@ function CollectionModal({ open, onClose, memberId, onSaved }) {
       fd.append('memberId', memberId)
       if (photo) fd.append('photo', photo)
       await api.post('/collections', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+      toast.success('Collection recorded')
       onSaved()
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to record collection')
+      toast.error(err.response?.data?.message || 'Failed to record collection')
     } finally {
       setSaving(false)
     }

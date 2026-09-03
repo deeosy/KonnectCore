@@ -35,6 +35,15 @@ const normalizeRow = (row, orgId) => {
   return member
 }
 
+const validateRow = (row, index) => {
+  const errors = []
+  const firstName = row.firstName || row.first_name || row.name || ''
+  if (!firstName.trim()) {
+    errors.push(`Row ${index + 1}: First name is required`)
+  }
+  return errors
+}
+
 export const importMembers = async (req, res, next) => {
   try {
     if (!req.file) {
@@ -52,14 +61,41 @@ export const importMembers = async (req, res, next) => {
 
     const orgId = req.body.organisationId || req.user.organisationId
 
-    const members = rows.map((row) => normalizeRow(row, orgId))
-    const inserted = await Member.insertMany(members)
-    const duplicates = []
+    const validationErrors = []
+    const validMembers = []
+
+    rows.forEach((row, index) => {
+      const rowErrors = validateRow(row, index)
+      if (rowErrors.length > 0) {
+        validationErrors.push(...rowErrors)
+      } else {
+        validMembers.push(normalizeRow(row, orgId))
+      }
+    })
+
+    if (validationErrors.length > 0 && validMembers.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'All rows failed validation',
+        errors: validationErrors,
+      })
+    }
+
+    let inserted = []
+    if (validMembers.length > 0) {
+      inserted = await Member.insertMany(validMembers, { ordered: false }).catch((err) => {
+        if (err.writeErrors) {
+          return err.insertedDocs
+        }
+        throw err
+      })
+    }
 
     res.status(201).json({
       success: true,
       message: `Imported ${inserted.length} members`,
       count: inserted.length,
+      validationErrors: validationErrors.length > 0 ? validationErrors : undefined,
       data: inserted.slice(0, 100),
     })
   } catch (error) {

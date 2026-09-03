@@ -42,6 +42,7 @@ function App() {
               }
             />
             <Route path="/members/new" element={<MemberNew />} />
+            <Route path="/members/:id/edit" element={<MemberNew />} />
             <Route path="/members/:id" element={<MemberDetail />} />
             <Route
               path="/groups"
