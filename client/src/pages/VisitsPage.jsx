@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
 import api from '../services/api'
 import PageHeader from '../components/ui/PageHeader'
+import Avatar from '../components/ui/Avatar'
+import EmptyState from '../components/ui/EmptyState'
 import { formatDate } from '../utils/format'
 
 export default function VisitsPage() {
@@ -17,36 +20,40 @@ export default function VisitsPage() {
   return (
     <div>
       <PageHeader title="Field Visits" subtitle="Recorded visits to members" />
-      <div className="rounded-xl border border-navy-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-3xl border border-border bg-surface shadow-card">
         {loading ? (
-          <div className="space-y-2 p-5">
+          <div className="space-y-3 p-6">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-12 animate-pulse rounded bg-navy-100" />
+              <div key={i} className="h-16 animate-pulse-soft rounded-xl bg-subtle" />
             ))}
           </div>
         ) : visits.length === 0 ? (
-          <p className="p-10 text-center text-sm text-navy-400">No visits recorded yet</p>
+          <EmptyState title="No visits recorded yet" description="Field visit records will appear here." />
         ) : (
-          <div className="divide-y divide-navy-100">
-            {visits.map((v) => (
-              <div key={v._id} className="flex flex-col gap-2 p-5 sm:flex-row sm:items-center">
+          <div className="divide-y divide-border-light">
+            {visits.map((v, i) => (
+              <motion.div
+                key={v._id}
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.03 }}
+                className="flex flex-col gap-3 p-5 transition-colors hover:bg-subtle/30 sm:flex-row sm:items-center"
+              >
                 <div className="flex min-w-0 flex-1 items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-100 text-sm font-semibold text-brand-700">
-                    {(v.memberId?.firstName || '?')[0]}
-                  </div>
+                  <Avatar name={v.memberId ? `${v.memberId.firstName} ${v.memberId.lastName}` : '?'} size="md" />
                   <div className="min-w-0">
-                    <p className="truncate font-medium text-navy-900">
+                    <p className="truncate font-semibold text-dark">
                       {v.memberId ? `${v.memberId.firstName} ${v.memberId.lastName}` : 'Unknown member'}
                     </p>
-                    <p className="truncate text-sm text-navy-500">{v.notes || 'No notes'}</p>
+                    <p className="truncate text-sm text-muted">{v.notes || 'No notes'}</p>
                   </div>
                 </div>
-                <div className="flex shrink-0 items-center gap-2 text-sm text-navy-400">
+                <div className="flex shrink-0 items-center gap-2 text-sm text-muted">
                   <span>{v.officerId?.name}</span>
                   <span>·</span>
                   <span>{formatDate(v.date, true)}</span>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         )}

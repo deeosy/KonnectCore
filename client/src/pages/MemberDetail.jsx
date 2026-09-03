@@ -12,7 +12,6 @@ import {
   Package,
   Wallet,
   HandCoins,
-  MapPin as MapIcon,
 } from 'lucide-react'
 import api from '../services/api'
 import Button from '../components/ui/Button'
@@ -21,7 +20,8 @@ import Card from '../components/ui/Card'
 import Modal from '../components/ui/Modal'
 import Input from '../components/ui/Input'
 import Select from '../components/ui/Select'
-import { formatCurrency, formatDate, initials } from '../utils/format'
+import Avatar from '../components/ui/Avatar'
+import { formatCurrency, formatDate } from '../utils/format'
 import { CROPS, QUALITY_GRADES } from '../utils/constants'
 
 const tabs = [
@@ -42,7 +42,6 @@ export default function MemberDetail() {
   const [tab, setTab] = useState('overview')
   const [loading, setLoading] = useState(true)
   const [collectionOpen, setCollectionOpen] = useState(false)
-  const [newCropOpen, setNewCropOpen] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -69,50 +68,49 @@ export default function MemberDetail() {
   if (loading) {
     return (
       <div className="space-y-4">
-        <div className="h-8 w-64 animate-pulse rounded bg-navy-100" />
-        <div className="h-48 animate-pulse rounded-xl bg-navy-100" />
+        <div className="h-8 w-64 animate-pulse-soft rounded-xl bg-subtle" />
+        <div className="h-48 animate-pulse-soft rounded-3xl bg-subtle" />
       </div>
     )
   }
 
   if (!member) {
-    return <div className="text-navy-500">Member not found</div>
+    return <div className="text-muted">Member not found</div>
   }
 
   const infoItems = [
     { icon: Phone, label: 'Phone', value: member.phone || '—' },
     { icon: Hash, label: 'ID Number', value: `${member.idType || ''} ${member.idNumber || ''}`.trim() || '—' },
     { icon: MapPin, label: 'Location', value: [member.location, member.district, member.region].filter(Boolean).join(', ') || '—' },
-    { icon: MapIcon, label: 'GPS', value: member.gpsLat ? `${member.gpsLat}, ${member.gpsLng}` : '—' },
+    { icon: MapPin, label: 'GPS', value: member.gpsLat ? `${member.gpsLat}, ${member.gpsLng}` : '—' },
   ]
 
   return (
     <div>
       <button
         onClick={() => navigate('/members')}
-        className="mb-4 flex items-center gap-2 text-sm font-medium text-navy-500 transition-colors hover:text-navy-900"
+        className="mb-4 flex items-center gap-2 text-sm font-medium text-muted transition-colors hover:text-dark"
       >
         <ArrowLeft className="h-4 w-4" /> Back to Members
       </button>
 
-      <div className="mb-6 flex flex-col gap-4 rounded-xl border border-navy-200 bg-white p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+      {/* Header card */}
+      <div className="mb-6 flex flex-col gap-4 rounded-3xl border border-border bg-surface p-6 shadow-card sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
-          {member.photo ? (
-            <img src={member.photo} alt="" className="h-16 w-16 rounded-full object-cover" />
-          ) : (
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-100 text-xl font-bold text-brand-700">
-              {initials(`${member.firstName} ${member.lastName}`)}
-            </div>
-          )}
+          <Avatar
+            name={`${member.firstName} ${member.lastName}`}
+            src={member.photo}
+            size="xl"
+          />
           <div>
-            <h1 className="text-2xl font-bold text-navy-900">
+            <h1 className="text-2xl font-bold tracking-tight text-dark">
               {member.firstName} {member.lastName}
             </h1>
-            <div className="mt-1 flex flex-wrap items-center gap-2">
+            <div className="mt-1.5 flex flex-wrap items-center gap-2">
               <Badge status={member.status} />
-              <span className="text-sm text-navy-400">#{member.membershipNumber}</span>
+              <span className="text-sm text-muted">#{member.membershipNumber}</span>
               {member.groupId && (
-                <span className="rounded bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700">
+                <span className="rounded-lg bg-primary-50 px-2 py-0.5 text-xs font-semibold text-primary">
                   {member.groupId.name}
                 </span>
               )}
@@ -120,30 +118,34 @@ export default function MemberDetail() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setNewCropOpen(false)}>Edit</Button>
-          <Button onClick={() => setCollectionOpen(true)}>Record Collection</Button>
+          <Button variant="outline" size="sm">Edit</Button>
+          <Button size="sm" onClick={() => setCollectionOpen(true)}>Record Collection</Button>
         </div>
       </div>
 
+      {/* Info grid */}
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {infoItems.map((item) => (
-          <div key={item.label} className="rounded-xl border border-navy-200 bg-white p-4 shadow-sm">
-            <div className="flex items-center gap-2 text-navy-400">
+          <div key={item.label} className="rounded-2xl border border-border bg-surface p-4 shadow-card">
+            <div className="flex items-center gap-2 text-muted">
               <item.icon className="h-4 w-4" />
-              <span className="text-xs uppercase tracking-wide">{item.label}</span>
+              <span className="text-xs font-semibold uppercase tracking-wider">{item.label}</span>
             </div>
-            <p className="mt-1 truncate text-sm font-medium text-navy-900">{item.value}</p>
+            <p className="mt-1.5 truncate text-sm font-semibold text-dark">{item.value}</p>
           </div>
         ))}
       </div>
 
-      <div className="mb-4 flex gap-1 overflow-x-auto rounded-xl border border-navy-200 bg-white p-1">
+      {/* Tabs */}
+      <div className="mb-5 flex gap-1 overflow-x-auto rounded-2xl border border-border bg-surface p-1.5 shadow-card">
         {tabs.map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`flex items-center gap-2 whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-              tab === t.key ? 'bg-brand-500 text-white' : 'text-navy-600 hover:bg-navy-50'
+            className={`flex items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-150 ${
+              tab === t.key
+                ? 'bg-primary text-white shadow-sm'
+                : 'text-muted hover:bg-subtle hover:text-dark'
             }`}
           >
             <t.icon className="h-4 w-4" />
@@ -154,16 +156,15 @@ export default function MemberDetail() {
 
       <Card>
         {tab === 'overview' && (
-          <OverviewTab member={member} farm={farm} officers={history?.visits || []} history={history} />
+          <OverviewTab member={member} farm={farm} history={history} />
         )}
         {tab === 'farm' && <FarmTab member={member} farm={farm} />}
-        {tab === 'collections' && <CollectionsTab collections={history?.collections || []} member={member} />}
+        {tab === 'collections' && <CollectionsTab collections={history?.collections || []} />}
         {tab === 'payments' && <PaymentsTab payments={history?.payments || []} />}
         {tab === 'loans' && <LoansTab loans={history?.loans || []} />}
         {tab === 'documents' && <DocumentsTab member={member} />}
       </Card>
 
-      {/* Record Collection Modal */}
       <CollectionModal
         open={collectionOpen}
         onClose={() => setCollectionOpen(false)}
@@ -182,48 +183,39 @@ function OverviewTab({ member, farm, history }) {
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <div>
-        <h3 className="mb-3 text-base font-semibold text-navy-900">Agriculture Summary</h3>
+        <h3 className="mb-3 text-base font-bold text-dark">Agriculture Summary</h3>
         <div className="space-y-2 text-sm">
-          <p className="flex justify-between border-b border-navy-100 pb-2">
-            <span className="text-navy-500">Farm Size</span>
-            <span className="font-medium">
-              {farm?.farmSize ?? member.farmSize ?? '—'} ha
-            </span>
-          </p>
-          <p className="flex justify-between border-b border-navy-100 pb-2">
-            <span className="text-navy-500">Main Crops</span>
-            <span className="font-medium">{(member.mainCrops || []).join(', ') || '—'}</span>
-          </p>
-          <p className="flex justify-between border-b border-navy-100 pb-2">
-            <span className="text-navy-500">Assigned Officer</span>
-            <span className="font-medium">{member.assignedOfficerId?.name || '—'}</span>
-          </p>
-          <p className="flex justify-between border-b border-navy-100 pb-2">
-            <span className="text-navy-500">Registered</span>
-            <span className="font-medium">{formatDate(member.createdAt)}</span>
-          </p>
+          {[
+            { label: 'Farm Size', value: `${farm?.farmSize ?? member.farmSize ?? '—'} ha` },
+            { label: 'Main Crops', value: (member.mainCrops || []).join(', ') || '—' },
+            { label: 'Assigned Officer', value: member.assignedOfficerId?.name || '—' },
+            { label: 'Registered', value: formatDate(member.createdAt) },
+          ].map((item) => (
+            <p key={item.label} className="flex justify-between border-b border-border-light pb-2">
+              <span className="text-muted">{item.label}</span>
+              <span className="font-semibold text-dark">{item.value}</span>
+            </p>
+          ))}
         </div>
         {member.notes && (
-          <div className="mt-4 rounded-lg bg-navy-50 p-3 text-sm text-navy-600">
+          <div className="mt-4 rounded-xl bg-subtle p-3 text-sm text-muted">
             {member.notes}
           </div>
         )}
       </div>
       <div>
-        <h3 className="mb-3 text-base font-semibold text-navy-900">Timeline</h3>
-        {(!history || history.timeline.length === 0) ? (
-          <p className="text-sm text-navy-400">No activity yet</p>
+        <h3 className="mb-3 text-base font-bold text-dark">Timeline</h3>
+        {!history || history.timeline.length === 0 ? (
+          <p className="text-sm text-muted">No activity yet</p>
         ) : (
           <ul className="space-y-3">
             {history.timeline.slice(0, 8).map((item, i) => (
               <li key={i} className="flex gap-3">
-                <div className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-brand-500" />
+                <div className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-primary" />
                 <div>
-                  <p className="text-sm font-medium text-navy-900 capitalize">
-                    {item.title}
-                  </p>
-                  <p className="text-xs text-navy-500">{item.detail}</p>
-                  <p className="text-xs text-navy-300">{formatDate(item.date, true)}</p>
+                  <p className="text-sm font-semibold text-dark capitalize">{item.title}</p>
+                  <p className="text-xs text-muted">{item.detail}</p>
+                  <p className="text-xs text-muted-light">{formatDate(item.date, true)}</p>
                 </div>
               </li>
             ))}
@@ -240,37 +232,33 @@ function FarmTab({ member, farm }) {
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-base font-semibold text-navy-900">
+        <h3 className="text-base font-bold text-dark">
           Farm Profile {farm?.farmSize ? `- ${farm.farmSize} ha` : ''}
         </h3>
         <Button size="sm" onClick={() => setOpen(true)}>Add Crop</Button>
       </div>
       {crops.length === 0 ? (
-        <p className="py-6 text-center text-sm text-navy-400">No crops recorded yet</p>
+        <p className="py-6 text-center text-sm text-muted">No crops recorded yet</p>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {crops.map((crop) => (
-            <div key={crop._id} className="rounded-lg border border-navy-200 p-4">
+            <div key={crop._id} className="rounded-2xl border border-border p-4">
               <div className="flex items-center justify-between">
-                <h4 className="font-semibold text-navy-900">{crop.cropName}</h4>
-                <span className="capitalize text-xs text-navy-400">{crop.status}</span>
+                <h4 className="font-semibold text-dark">{crop.cropName}</h4>
+                <span className="capitalize text-xs text-muted">{crop.status}</span>
               </div>
-              {crop.variety && <p className="text-sm text-navy-500">{crop.variety}</p>}
+              {crop.variety && <p className="text-sm text-muted">{crop.variety}</p>}
               <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
-                <p className="text-navy-500">Area: <span className="font-medium text-navy-900">{crop.areaHectares || '—'} ha</span></p>
-                <p className="text-navy-500">Season: <span className="font-medium text-navy-900">{crop.season || '—'}</span></p>
-                <p className="text-navy-500">Est. Yield: <span className="font-medium text-navy-900">{crop.estimatedYield || '—'}</span></p>
-                <p className="text-navy-500">Actual: <span className="font-medium text-navy-900">{crop.actualYield || '—'}</span></p>
+                <p className="text-muted">Area: <span className="font-semibold text-dark">{crop.areaHectares || '—'} ha</span></p>
+                <p className="text-muted">Season: <span className="font-semibold text-dark">{crop.season || '—'}</span></p>
+                <p className="text-muted">Est. Yield: <span className="font-semibold text-dark">{crop.estimatedYield || '—'}</span></p>
+                <p className="text-muted">Actual: <span className="font-semibold text-dark">{crop.actualYield || '—'}</span></p>
               </div>
             </div>
           ))}
         </div>
       )}
-      <AddCropModal
-        open={open}
-        onClose={() => setOpen(false)}
-        memberId={member._id}
-      />
+      <AddCropModal open={open} onClose={() => setOpen(false)} memberId={member._id} />
     </div>
   )
 }
@@ -294,8 +282,16 @@ function AddCropModal({ open, onClose, memberId }) {
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Add Crop"
-      footer={<><Button variant="outline" onClick={onClose}>Cancel</Button><Button loading={saving} onClick={submit}>Add Crop</Button></>}
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Add Crop"
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button loading={saving} onClick={submit}>Add Crop</Button>
+        </>
+      }
     >
       <div className="grid gap-4 sm:grid-cols-2">
         <Select label="Crop *" options={CROPS.map((c) => ({ value: c, label: c }))} value={form.cropName} onChange={(e) => setForm((f) => ({ ...f, cropName: e.target.value }))} />
@@ -308,34 +304,34 @@ function AddCropModal({ open, onClose, memberId }) {
   )
 }
 
-function CollectionsTab({ collections, member }) {
+function CollectionsTab({ collections }) {
   return (
     <div>
-      <h3 className="mb-4 text-base font-semibold text-navy-900">Collection History</h3>
+      <h3 className="mb-4 text-base font-bold text-dark">Collection History</h3>
       {collections.length === 0 ? (
-        <p className="py-6 text-center text-sm text-navy-400">No collections recorded</p>
+        <p className="py-6 text-center text-sm text-muted">No collections recorded</p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-navy-100">
+        <div className="overflow-x-auto rounded-2xl border border-border">
+          <table className="min-w-full divide-y divide-border-light">
             <thead>
-              <tr className="text-left text-xs font-semibold uppercase text-navy-500">
-                <th className="py-2 pr-4">Date</th>
-                <th className="py-2 pr-4">Crop</th>
-                <th className="py-2 pr-4">Qty</th>
-                <th className="py-2 pr-4">Grade</th>
-                <th className="py-2 pr-4">Price</th>
-                <th className="py-2 pr-4">Total</th>
+              <tr className="bg-subtle/50 text-left text-xs font-semibold uppercase tracking-wider text-muted">
+                <th className="px-4 py-3">Date</th>
+                <th className="px-4 py-3">Crop</th>
+                <th className="px-4 py-3">Qty</th>
+                <th className="px-4 py-3">Grade</th>
+                <th className="px-4 py-3">Price</th>
+                <th className="px-4 py-3">Total</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-navy-100">
+            <tbody className="divide-y divide-border-light">
               {collections.map((c) => (
-                <tr key={c._id}>
-                  <td className="py-2.5 pr-4 text-sm text-navy-600">{formatDate(c.date)}</td>
-                  <td className="py-2.5 pr-4 text-sm font-medium text-navy-900">{c.crop}</td>
-                  <td className="py-2.5 pr-4 text-sm">{c.quantity} {c.unit}</td>
-                  <td className="py-2.5 pr-4 text-sm">{c.qualityGrade}</td>
-                  <td className="py-2.5 pr-4 text-sm">{c.pricePerUnit}</td>
-                  <td className="py-2.5 pr-4 text-sm font-medium">{formatCurrency(c.totalValue)}</td>
+                <tr key={c._id} className="hover:bg-subtle/30">
+                  <td className="px-4 py-3 text-sm text-muted">{formatDate(c.date)}</td>
+                  <td className="px-4 py-3 text-sm font-semibold text-dark">{c.crop}</td>
+                  <td className="px-4 py-3 text-sm">{c.quantity} {c.unit}</td>
+                  <td className="px-4 py-3 text-sm">{c.qualityGrade}</td>
+                  <td className="px-4 py-3 text-sm">{c.pricePerUnit}</td>
+                  <td className="px-4 py-3 text-sm font-semibold text-dark">{formatCurrency(c.totalValue)}</td>
                 </tr>
               ))}
             </tbody>
@@ -349,29 +345,29 @@ function CollectionsTab({ collections, member }) {
 function PaymentsTab({ payments }) {
   return (
     <div>
-      <h3 className="mb-4 text-base font-semibold text-navy-900">Payment History</h3>
+      <h3 className="mb-4 text-base font-bold text-dark">Payment History</h3>
       {payments.length === 0 ? (
-        <p className="py-6 text-center text-sm text-navy-400">No payments recorded</p>
+        <p className="py-6 text-center text-sm text-muted">No payments recorded</p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-navy-100">
+        <div className="overflow-x-auto rounded-2xl border border-border">
+          <table className="min-w-full divide-y divide-border-light">
             <thead>
-              <tr className="text-left text-xs font-semibold uppercase text-navy-500">
-                <th className="py-2 pr-4">Date</th>
-                <th className="py-2 pr-4">Type</th>
-                <th className="py-2 pr-4">Method</th>
-                <th className="py-2 pr-4">Amount</th>
-                <th className="py-2 pr-4">Status</th>
+              <tr className="bg-subtle/50 text-left text-xs font-semibold uppercase tracking-wider text-muted">
+                <th className="px-4 py-3">Date</th>
+                <th className="px-4 py-3">Type</th>
+                <th className="px-4 py-3">Method</th>
+                <th className="px-4 py-3">Amount</th>
+                <th className="px-4 py-3">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-navy-100">
+            <tbody className="divide-y divide-border-light">
               {payments.map((p) => (
-                <tr key={p._id}>
-                  <td className="py-2.5 pr-4 text-sm text-navy-600">{formatDate(p.paymentDate)}</td>
-                  <td className="py-2.5 pr-4 text-sm capitalize">{p.type.replace(/_/g, ' ')}</td>
-                  <td className="py-2.5 pr-4 text-sm capitalize">{p.method.replace(/_/g, ' ')}</td>
-                  <td className="py-2.5 pr-4 text-sm font-medium">{formatCurrency(p.amount)}</td>
-                  <td className="py-2.5 pr-4"><Badge status={p.status} /></td>
+                <tr key={p._id} className="hover:bg-subtle/30">
+                  <td className="px-4 py-3 text-sm text-muted">{formatDate(p.paymentDate)}</td>
+                  <td className="px-4 py-3 text-sm capitalize">{p.type.replace(/_/g, ' ')}</td>
+                  <td className="px-4 py-3 text-sm capitalize">{p.method.replace(/_/g, ' ')}</td>
+                  <td className="px-4 py-3 text-sm font-semibold text-dark">{formatCurrency(p.amount)}</td>
+                  <td className="px-4 py-3"><Badge status={p.status} /></td>
                 </tr>
               ))}
             </tbody>
@@ -385,21 +381,21 @@ function PaymentsTab({ payments }) {
 function LoansTab({ loans }) {
   return (
     <div>
-      <h3 className="mb-4 text-base font-semibold text-navy-900">Loans</h3>
+      <h3 className="mb-4 text-base font-bold text-dark">Loans</h3>
       {loans.length === 0 ? (
-        <p className="py-6 text-center text-sm text-navy-400">No loans</p>
+        <p className="py-6 text-center text-sm text-muted">No loans</p>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {loans.map((l) => (
-            <div key={l._id} className="rounded-lg border border-navy-200 p-4">
+            <div key={l._id} className="rounded-2xl border border-border p-4">
               <div className="flex items-center justify-between">
-                <h4 className="font-semibold capitalize text-navy-900">{l.type} Loan</h4>
+                <h4 className="font-semibold capitalize text-dark">{l.type} Loan</h4>
                 <Badge status={l.status} />
               </div>
               <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
-                <p className="text-navy-500">Amount: <span className="font-medium">{formatCurrency(l.amount)}</span></p>
-                <p className="text-navy-500">Balance: <span className="font-medium">{formatCurrency(l.balance)}</span></p>
-                <p className="text-navy-500">Due: <span className="font-medium">{formatDate(l.dueDate)}</span></p>
+                <p className="text-muted">Amount: <span className="font-semibold text-dark">{formatCurrency(l.amount)}</span></p>
+                <p className="text-muted">Balance: <span className="font-semibold text-dark">{formatCurrency(l.balance)}</span></p>
+                <p className="text-muted">Due: <span className="font-semibold text-dark">{formatDate(l.dueDate)}</span></p>
               </div>
             </div>
           ))}
@@ -434,14 +430,14 @@ function DocumentsTab({ member }) {
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-base font-semibold text-navy-900">Documents & Photos</h3>
+        <h3 className="text-base font-bold text-dark">Documents & Photos</h3>
         <Button size="sm" disabled={uploading} onClick={() => document.getElementById('doc-upload').click()}>
           <Upload className="h-4 w-4" /> {uploading ? 'Uploading...' : 'Upload'}
         </Button>
         <input id="doc-upload" type="file" className="hidden" onChange={handleUpload} />
       </div>
       {member.documents?.length === 0 ? (
-        <p className="py-6 text-center text-sm text-navy-400">No documents attached</p>
+        <p className="py-6 text-center text-sm text-muted">No documents attached</p>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {member.documents.map((doc) => (
@@ -450,12 +446,12 @@ function DocumentsTab({ member }) {
               href={doc.filePath}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-3 rounded-lg border border-navy-200 p-3 transition-colors hover:border-brand-300 hover:bg-brand-50/50"
+              className="flex items-center gap-3 rounded-2xl border border-border p-3 transition-colors hover:border-primary-300 hover:bg-primary-50/30"
             >
-              <FileText className="h-8 w-8 shrink-0 text-brand-500" />
+              <FileText className="h-8 w-8 shrink-0 text-primary" />
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-navy-900">{doc.title || doc.fileName}</p>
-                <p className="text-xs text-navy-400">{formatDate(doc.createdAt)}</p>
+                <p className="truncate text-sm font-semibold text-dark">{doc.title || doc.fileName}</p>
+                <p className="text-xs text-muted">{formatDate(doc.createdAt)}</p>
               </div>
             </a>
           ))}
@@ -494,7 +490,12 @@ function CollectionModal({ open, onClose, memberId, onSaved }) {
       open={open}
       onClose={onClose}
       title="Record Collection"
-      footer={<><Button variant="outline" onClick={onClose}>Cancel</Button><Button loading={saving} onClick={submit}>Save Collection</Button></>}
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button loading={saving} onClick={submit}>Save Collection</Button>
+        </>
+      }
     >
       <div className="grid gap-4 sm:grid-cols-2">
         <Select label="Crop *" options={CROPS.map((c) => ({ value: c, label: c }))} value={form.crop} onChange={(e) => setForm((f) => ({ ...f, crop: e.target.value }))} />
@@ -506,15 +507,15 @@ function CollectionModal({ open, onClose, memberId, onSaved }) {
         <Input label="Price per unit" type="number" step="any" value={form.pricePerUnit} onChange={(e) => setForm((f) => ({ ...f, pricePerUnit: e.target.value }))} />
         <Input label="Collection Location" value={form.collectionLocation} onChange={(e) => setForm((f) => ({ ...f, collectionLocation: e.target.value }))} />
         <div>
-          <label className="mb-1 block text-sm font-medium text-navy-700">Photo</label>
-          <input type="file" accept="image/*" onChange={(e) => setPhoto(e.target.files[0])} className="w-full rounded-lg border border-navy-200 px-3 py-2 text-sm" />
+          <label className="mb-1.5 block text-sm font-medium text-dark">Photo</label>
+          <input type="file" accept="image/*" onChange={(e) => setPhoto(e.target.files[0])} className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm text-dark outline-none transition-all duration-150 focus:border-primary focus:ring-2 focus:ring-primary-100" />
         </div>
         <div className="sm:col-span-2">
           <Input label="Notes" value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
         </div>
-        <div className="sm:col-span-2 flex justify-between rounded-lg bg-brand-50 px-4 py-3">
-          <span className="text-sm font-medium text-brand-700">Total Value</span>
-          <span className="text-sm font-bold text-brand-700">{formatCurrency(totalValue)}</span>
+        <div className="sm:col-span-2 flex justify-between rounded-xl bg-primary-50 px-4 py-3">
+          <span className="text-sm font-semibold text-primary">Total Value</span>
+          <span className="text-sm font-bold text-primary">{formatCurrency(totalValue)}</span>
         </div>
       </div>
     </Modal>

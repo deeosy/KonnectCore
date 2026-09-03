@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Plus, Users } from 'lucide-react'
+import { motion } from 'framer-motion'
 import api from '../services/api'
 import PageHeader from '../components/ui/PageHeader'
 import Button from '../components/ui/Button'
@@ -7,7 +8,8 @@ import Card from '../components/ui/Card'
 import Modal from '../components/ui/Modal'
 import Input from '../components/ui/Input'
 import Select from '../components/ui/Select'
-import { formatNumber } from '../utils/format'
+import Avatar from '../components/ui/Avatar'
+import EmptyState from '../components/ui/EmptyState'
 
 export default function GroupsPage() {
   const [groups, setGroups] = useState([])
@@ -42,36 +44,38 @@ export default function GroupsPage() {
       {loading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-32 animate-pulse rounded-xl bg-navy-100" />
+            <div key={i} className="h-32 animate-pulse-soft rounded-3xl bg-subtle" />
           ))}
         </div>
       ) : groups.length === 0 ? (
         <Card>
-          <p className="py-10 text-center text-sm text-navy-400">No groups yet. Create your first group.</p>
+          <EmptyState icon={Users} title="No groups yet" description="Create your first group to get started." />
         </Card>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {groups.map((g) => (
-            <button
+            <motion.button
               key={g._id}
               onClick={() => setSelected(g)}
-              className="rounded-xl border border-navy-200 bg-white p-5 text-left shadow-sm transition-all hover:border-brand-300 hover:shadow-md"
+              whileHover={{ y: -2 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+              className="rounded-3xl border border-border bg-surface p-5 text-left shadow-card transition-colors hover:border-primary-300"
             >
               <div className="flex items-start justify-between">
-                <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary-50 text-primary">
                   <Users className="h-5 w-5" />
                 </div>
-                <span className="rounded-full border border-navy-200 px-2.5 py-0.5 text-xs capitalize text-navy-500">
+                <span className="rounded-full border border-border bg-subtle px-2.5 py-0.5 text-xs font-medium capitalize text-muted">
                   {g.type}
                 </span>
               </div>
-              <h3 className="mt-3 font-semibold text-navy-900">{g.name}</h3>
-              {g.description && <p className="mt-1 line-clamp-2 text-sm text-navy-500">{g.description}</p>}
-              <div className="mt-3 flex items-center gap-4 text-sm text-navy-500">
+              <h3 className="mt-3 font-bold text-dark">{g.name}</h3>
+              {g.description && <p className="mt-1 line-clamp-2 text-sm text-muted">{g.description}</p>}
+              <div className="mt-3 flex items-center gap-4 text-sm text-muted">
                 <span className="flex items-center gap-1"><Users className="h-4 w-4" /> {g.memberCount || 0}</span>
                 {g.leaderId && <span className="truncate">Leader: {g.leaderId.name}</span>}
               </div>
-            </button>
+            </motion.button>
           ))}
         </div>
       )}
@@ -110,7 +114,12 @@ function CreateGroupModal({ open, onClose, onSaved, groups }) {
       open={open}
       onClose={onClose}
       title="New Group"
-      footer={<><Button variant="outline" onClick={onClose}>Cancel</Button><Button loading={saving} onClick={submit}>Create Group</Button></>}
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button loading={saving} onClick={submit}>Create Group</Button>
+        </>
+      }
     >
       <div className="grid gap-4 sm:grid-cols-2">
         <Input label="Name *" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
@@ -138,24 +147,22 @@ function GroupDetailModal({ group, onClose }) {
     <Modal open={!!group} onClose={onClose} title={group?.name} size="lg">
       {group && (
         <div>
-          <div className="mb-4 flex flex-wrap gap-3 text-sm text-navy-500">
-            <span className="rounded bg-navy-50 px-2 py-1 capitalize">{group.type}</span>
-            <span className="rounded bg-brand-50 px-2 py-1 font-medium text-brand-700">{members.length} members</span>
-            {group.leaderId && <span className="rounded bg-navy-50 px-2 py-1">Leader: {group.leaderId.name}</span>}
+          <div className="mb-4 flex flex-wrap gap-3 text-sm text-muted">
+            <span className="rounded-lg bg-subtle px-2.5 py-1 capitalize font-medium">{group.type}</span>
+            <span className="rounded-lg bg-primary-50 px-2.5 py-1 font-semibold text-primary">{members.length} members</span>
+            {group.leaderId && <span className="rounded-lg bg-subtle px-2.5 py-1">Leader: {group.leaderId.name}</span>}
           </div>
-          <h4 className="mb-2 text-sm font-semibold text-navy-900">Members ({members.length})</h4>
+          <h4 className="mb-2 text-sm font-bold text-dark">Members ({members.length})</h4>
           {members.length === 0 ? (
-            <p className="text-sm text-navy-400">No members assigned</p>
+            <p className="text-sm text-muted">No members assigned</p>
           ) : (
             <div className="grid gap-2 sm:grid-cols-2">
               {members.map((m) => (
-                <div key={m._id} className="flex items-center gap-3 rounded-lg border border-navy-100 p-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-xs font-semibold text-brand-700">
-                    {(m.firstName || '')[0]}{(m.lastName || '')[0]}
-                  </div>
+                <div key={m._id} className="flex items-center gap-3 rounded-xl border border-border-light p-2.5">
+                  <Avatar name={`${m.firstName} ${m.lastName}`} size="sm" />
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-navy-900">{m.firstName} {m.lastName}</p>
-                    <p className="text-xs text-navy-400">{m.phone} · {m.membershipNumber}</p>
+                    <p className="truncate text-sm font-semibold text-dark">{m.firstName} {m.lastName}</p>
+                    <p className="text-xs text-muted">{m.phone} · {m.membershipNumber}</p>
                   </div>
                 </div>
               ))}

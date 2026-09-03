@@ -1,21 +1,31 @@
 import { Loader2 } from 'lucide-react'
+import { motion } from 'framer-motion'
 
 const variants = {
   primary:
-    'bg-brand-500 text-white hover:bg-brand-600 focus-visible:ring-brand-500 disabled:hover:bg-brand-500',
-  navy: 'bg-navy-900 text-white hover:bg-navy-800 focus-visible:ring-navy-900 disabled:hover:bg-navy-900',
+    'bg-primary text-white hover:bg-primary-hover focus-visible:ring-primary-light shadow-sm',
   secondary:
-    'bg-brand-50 text-brand-700 border border-brand-200 hover:bg-brand-100 focus-visible:ring-brand-500',
+    'bg-secondary text-white hover:bg-secondary-hover focus-visible:ring-secondary-light shadow-sm',
   outline:
-    'bg-white text-navy-700 border border-navy-200 hover:bg-navy-50 focus-visible:ring-navy-400',
-  danger: 'bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-600 disabled:hover:bg-red-600',
-  ghost: 'bg-transparent text-navy-600 hover:bg-navy-100 focus-visible:ring-navy-400',
+    'bg-surface text-dark border border-border hover:bg-subtle focus-visible:ring-muted-light',
+  'outline-primary':
+    'bg-transparent text-primary border border-primary hover:bg-primary-50 focus-visible:ring-primary-light',
+  'outline-danger':
+    'bg-transparent text-danger border border-danger hover:bg-danger-50 focus-visible:ring-danger-light',
+  danger:
+    'bg-danger text-white hover:bg-danger-700 focus-visible:ring-danger-light shadow-sm',
+  ghost:
+    'bg-transparent text-muted hover:bg-subtle hover:text-dark focus-visible:ring-muted-light',
+  'ghost-primary':
+    'bg-transparent text-primary hover:bg-primary-50 focus-visible:ring-primary-light',
 }
 
 const sizes = {
-  sm: 'px-3 py-1.5 text-sm',
-  md: 'px-4 py-2 text-sm',
-  lg: 'px-6 py-2.5 text-base',
+  sm: 'h-8 px-3 text-xs rounded-lg gap-1.5',
+  md: 'h-10 px-4 text-sm rounded-xl gap-2',
+  lg: 'h-12 px-6 text-base rounded-xl gap-2',
+  icon: 'h-10 w-10 rounded-xl',
+  'icon-sm': 'h-8 w-8 rounded-lg',
 }
 
 export default function Button({
@@ -28,13 +38,16 @@ export default function Button({
   ...props
 }) {
   return (
-    <button
-      className={`inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed ${variants[variant]} ${sizes[size]} ${className}`}
+    <motion.button
+      whileHover={disabled || loading ? {} : { scale: 1.015 }}
+      whileTap={disabled || loading ? {} : { scale: 0.98 }}
+      transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+      className={`inline-flex items-center justify-center gap-2 font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${variants[variant]} ${sizes[size]} ${className}`}
       disabled={disabled || loading}
       {...props}
     >
       {loading && <Loader2 className="h-4 w-4 animate-spin" />}
       {children}
-    </button>
+    </motion.button>
   )
 }

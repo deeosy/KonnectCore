@@ -1,18 +1,32 @@
-export default function Card({ children, className = '', title, subtitle, action }) {
+import { motion } from 'framer-motion'
+
+export default function Card({ children, className = '', title, subtitle, action, hover = false, ...props }) {
+  const Wrapper = hover ? motion.div : 'div'
+  const wrapperProps = hover
+    ? {
+        whileHover: { y: -2, boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.06), 0 4px 6px -4px rgb(0 0 0 / 0.04)' },
+        transition: { type: 'spring', stiffness: 300, damping: 20 },
+      }
+    : {}
+
   return (
-    <div className={`rounded-xl border border-navy-200 bg-white shadow-sm ${className}`}>
+    <Wrapper
+      className={`rounded-3xl border border-border bg-surface shadow-card ${className}`}
+      {...wrapperProps}
+      {...props}
+    >
       {(title || action) && (
-        <div className="flex items-center justify-between border-b border-navy-100 px-5 py-4">
+        <div className="flex items-center justify-between border-b border-border-light px-6 py-5">
           <div>
             {title && (
-              <h3 className="text-base font-semibold text-navy-900">{title}</h3>
+              <h3 className="text-base font-bold text-dark">{title}</h3>
             )}
-            {subtitle && <p className="mt-0.5 text-sm text-navy-500">{subtitle}</p>}
+            {subtitle && <p className="mt-0.5 text-sm text-muted">{subtitle}</p>}
           </div>
           {action}
         </div>
       )}
-      <div className="p-5">{children}</div>
-    </div>
+      <div className="p-6">{children}</div>
+    </Wrapper>
   )
 }

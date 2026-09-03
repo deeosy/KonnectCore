@@ -1,14 +1,16 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Plus, Upload, Download, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Upload, Download, ChevronLeft, ChevronRight } from 'lucide-react'
 import api from '../services/api'
 import PageHeader from '../components/ui/PageHeader'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
 import Select from '../components/ui/Select'
 import Badge from '../components/ui/Badge'
+import SearchBar from '../components/ui/SearchBar'
+import Avatar from '../components/ui/Avatar'
+import EmptyState from '../components/ui/EmptyState'
 import { MEMBER_STATUSES, CROPS } from '../utils/constants'
-import { initials } from '../utils/format'
 
 export default function Members() {
   const navigate = useNavigate()
@@ -18,7 +20,6 @@ export default function Members() {
   const [totalPages, setTotalPages] = useState(1)
   const [total, setTotal] = useState(0)
   const [filters, setFilters] = useState({ search: '', status: '', crop: '', location: '' })
-  const [groups, setGroups] = useState([])
 
   const loadMembers = useCallback(async () => {
     setLoading(true)
@@ -42,10 +43,6 @@ export default function Members() {
     loadMembers()
   }, [loadMembers])
 
-  useEffect(() => {
-    api.get('/groups').then(({ data }) => setGroups(data.data)).catch(() => {})
-  }, [])
-
   const handleFilterChange = (key, value) => {
     setPage(1)
     setFilters((f) => ({ ...f, [key]: value }))
@@ -54,7 +51,6 @@ export default function Members() {
   const handleExport = () => {
     const params = new URLSearchParams()
     Object.entries(filters).forEach(([k, v]) => v && params.set(k, v))
-    const token = localStorage.getItem('token')
     window.open(`/api/members/export?${params.toString()}`, '_blank')
   }
 
@@ -65,7 +61,7 @@ export default function Members() {
         subtitle={`${total} member${total === 1 ? '' : 's'} registered`}
         action={
           <>
-            <Button variant="outline" onClick={handleExport}>
+            <Button variant="outline" onClick={handleExport} size="sm">
               <Download className="h-4 w-4" /> Export
             </Button>
             <Button
@@ -91,25 +87,24 @@ export default function Members() {
                 input.click()
               }}
               variant="secondary"
+              size="sm"
             >
               <Upload className="h-4 w-4" /> Import
             </Button>
-            <Button onClick={() => navigate('/members/new')}>
+            <Button onClick={() => navigate('/members/new')} size="sm">
               <Plus className="h-4 w-4" /> Add Member
             </Button>
           </>
         }
       />
 
-      <div className="mb-4 grid gap-3 rounded-xl border border-navy-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div>
-          <Input
-            placeholder="Search name, phone, ID, membership..."
-            value={filters.search}
-            onChange={(e) => handleFilterChange('search', e.target.value)}
-            className="pl-9"
-          />
-        </div>
+      {/* Filters */}
+      <div className="mb-5 grid gap-3 rounded-3xl border border-border bg-surface p-4 shadow-card sm:grid-cols-2 lg:grid-cols-4">
+        <SearchBar
+          placeholder="Search name, phone, ID..."
+          value={filters.search}
+          onChange={(e) => handleFilterChange('search', e.target.value)}
+        />
         <Select
           placeholder="All statuses"
           options={MEMBER_STATUSES}
@@ -129,64 +124,61 @@ export default function Members() {
         />
       </div>
 
-      <div className="rounded-xl border border-navy-200 bg-white shadow-sm">
+      {/* Table */}
+      <div className="overflow-hidden rounded-3xl border border-border bg-surface shadow-card">
         {loading ? (
-          <div className="space-y-2 p-5">
+          <div className="space-y-3 p-6">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-12 animate-pulse rounded bg-navy-100" />
+              <div key={i} className="h-12 animate-pulse-soft rounded-xl bg-subtle" />
             ))}
           </div>
         ) : members.length === 0 ? (
-          <div className="p-10 text-center text-sm text-navy-400">
-            No members found. Try adjusting your filters or add a new member.
-          </div>
+          <EmptyState title="No members found" description="Try adjusting your filters or add a new member." />
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-navy-100">
+            <table className="min-w-full divide-y divide-border-light">
               <thead>
-                <tr className="bg-navy-50 text-left text-xs font-semibold uppercase tracking-wide text-navy-500">
-                  <th className="px-5 py-3">Member</th>
-                  <th className="px-5 py-3">Membership No.</th>
-                  <th className="px-5 py-3">Phone</th>
-                  <th className="px-5 py-3">Location</th>
-                  <th className="px-5 py-3">Crops</th>
-                  <th className="px-5 py-3">Status</th>
+                <tr className="bg-subtle/50 text-left text-xs font-semibold uppercase tracking-wider text-muted">
+                  <th className="px-5 py-3.5">Member</th>
+                  <th className="px-5 py-3.5">Membership No.</th>
+                  <th className="px-5 py-3.5">Phone</th>
+                  <th className="px-5 py-3.5">Location</th>
+                  <th className="px-5 py-3.5">Crops</th>
+                  <th className="px-5 py-3.5">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-navy-100">
+              <tbody className="divide-y divide-border-light">
                 {members.map((m) => (
                   <tr
                     key={m._id}
                     onClick={() => navigate(`/members/${m._id}`)}
-                    className="cursor-pointer transition-colors hover:bg-brand-50/50"
+                    className="cursor-pointer transition-colors hover:bg-primary-50/30"
                   >
-                    <td className="px-5 py-3">
+                    <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
-                        {m.photo ? (
-                          <img src={m.photo} alt="" className="h-9 w-9 rounded-full object-cover" />
-                        ) : (
-                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-100 text-xs font-semibold text-brand-700">
-                            {initials(`${m.firstName} ${m.lastName}`)}
-                          </div>
-                        )}
-                        <span className="font-medium text-navy-900">
+                        <Avatar
+                          name={`${m.firstName} ${m.lastName}`}
+                          src={m.photo}
+                          size="sm"
+                        />
+                        <span className="font-semibold text-dark">
                           {m.firstName} {m.lastName}
                         </span>
                       </div>
                     </td>
-                    <td className="px-5 py-3 text-sm text-navy-600">{m.membershipNumber}</td>
-                    <td className="px-5 py-3 text-sm text-navy-600">{m.phone}</td>
-                    <td className="px-5 py-3 text-sm text-navy-600">{m.location || '—'}</td>
-                    <td className="px-5 py-3">
+                    <td className="px-5 py-3.5 text-sm text-muted">{m.membershipNumber}</td>
+                    <td className="px-5 py-3.5 text-sm text-muted">{m.phone}</td>
+                    <td className="px-5 py-3.5 text-sm text-muted">{m.location || '—'}</td>
+                    <td className="px-5 py-3.5">
                       <div className="flex flex-wrap gap-1">
                         {(m.mainCrops || []).slice(0, 2).map((c) => (
-                          <span key={c} className="rounded bg-navy-100 px-1.5 py-0.5 text-xs text-navy-600">
+                          <span key={c} className="rounded-lg bg-subtle px-2 py-0.5 text-xs font-medium text-muted">
                             {c}
                           </span>
                         ))}
                       </div>
                     </td>
-                    <td className="px-5 py-3">
+                    <td className="px-5 py-3.5">
                       <Badge status={m.status} />
                     </td>
                   </tr>
@@ -197,25 +189,15 @@ export default function Members() {
         )}
 
         {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-navy-100 px-5 py-3">
-            <p className="text-sm text-navy-500">
-              Showing page {page} of {totalPages}
+          <div className="flex items-center justify-between border-t border-border-light px-5 py-3.5">
+            <p className="text-sm text-muted">
+              Page {page} of {totalPages}
             </p>
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => p - 1)}
-              >
+              <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
                 <ChevronLeft className="h-4 w-4" /> Prev
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page >= totalPages}
-                onClick={() => setPage((p) => p + 1)}
-              >
+              <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
                 Next <ChevronRight className="h-4 w-4" />
               </Button>
             </div>

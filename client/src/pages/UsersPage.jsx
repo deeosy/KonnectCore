@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Plus, UserCog } from 'lucide-react'
+import { Plus } from 'lucide-react'
+import { motion } from 'framer-motion'
 import api from '../services/api'
 import PageHeader from '../components/ui/PageHeader'
 import Button from '../components/ui/Button'
@@ -7,10 +8,9 @@ import Badge from '../components/ui/Badge'
 import Modal from '../components/ui/Modal'
 import Input from '../components/ui/Input'
 import Select from '../components/ui/Select'
+import Avatar from '../components/ui/Avatar'
+import EmptyState from '../components/ui/EmptyState'
 import { ROLES } from '../utils/constants'
-import { initials } from '../utils/format'
-
-const roleBadge = { admin: 'navy', manager: 'brand', fieldOfficer: 'outline' }
 
 export default function UsersPage() {
   const [users, setUsers] = useState([])
@@ -36,36 +36,40 @@ export default function UsersPage() {
         subtitle="Manage admin, manager and field officer accounts"
         action={<Button onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4" /> New User</Button>}
       />
-      <div className="rounded-xl border border-navy-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-3xl border border-border bg-surface shadow-card">
         {loading ? (
-          <div className="space-y-2 p-5">
+          <div className="space-y-3 p-6">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-12 animate-pulse rounded bg-navy-100" />
+              <div key={i} className="h-12 animate-pulse-soft rounded-xl bg-subtle" />
             ))}
           </div>
         ) : users.length === 0 ? (
-          <p className="p-10 text-center text-sm text-navy-400">No users yet</p>
+          <EmptyState title="No users yet" description="Staff accounts will appear here." />
         ) : (
-          <div className="divide-y divide-navy-100">
-            {users.map((u) => (
-              <div key={u._id} className="flex items-center gap-3 p-5">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-navy-900 text-sm font-semibold text-white">
-                  {initials(u.name)}
-                </div>
+          <div className="divide-y divide-border-light">
+            {users.map((u, i) => (
+              <motion.div
+                key={u._id}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: i * 0.03 }}
+                className="flex items-center gap-3 p-5 transition-colors hover:bg-subtle/30"
+              >
+                <Avatar name={u.name} size="md" />
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium text-navy-900">{u.name}</p>
-                  <p className="text-sm text-navy-500">{u.email} · {u.phone || '—'}</p>
+                  <p className="font-semibold text-dark">{u.name}</p>
+                  <p className="text-sm text-muted">{u.email} · {u.phone || '—'}</p>
                 </div>
                 <div className="flex items-center gap-3">
                   {u.assignedArea && (
-                    <span className="hidden text-sm text-navy-400 sm:block">{u.assignedArea}</span>
+                    <span className="hidden text-sm text-muted sm:block">{u.assignedArea}</span>
                   )}
                   <Badge status="active" label={u.isActive ? 'Active' : 'Inactive'} />
-                  <span className="rounded-full border border-navy-200 bg-navy-50 px-2.5 py-0.5 text-xs capitalize text-navy-700">
+                  <span className="rounded-full border border-border bg-subtle px-2.5 py-0.5 text-xs font-medium capitalize text-dark">
                     {u.role}
                   </span>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         )}
@@ -98,7 +102,12 @@ function CreateUserModal({ open, onClose, onSaved }) {
       open={open}
       onClose={onClose}
       title="New Staff User"
-      footer={<><Button variant="outline" onClick={onClose}>Cancel</Button><Button loading={saving} onClick={submit}>Create User</Button></>}
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button loading={saving} onClick={submit}>Create User</Button>
+        </>
+      }
     >
       <div className="grid gap-4 sm:grid-cols-2">
         <Input label="Name *" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
@@ -107,7 +116,7 @@ function CreateUserModal({ open, onClose, onSaved }) {
         <Select label="Role" options={ROLES} value={form.role} onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))} />
         <Input label="Assigned Area" value={form.assignedArea} onChange={(e) => setForm((f) => ({ ...f, assignedArea: e.target.value }))} />
       </div>
-      <p className="mt-3 text-xs text-navy-400">Default password: password123</p>
+      <p className="mt-3 text-xs text-muted">Default password: password123</p>
     </Modal>
   )
 }

@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { Download, FileSpreadsheet } from 'lucide-react'
+import { motion } from 'framer-motion'
 import PageHeader from '../components/ui/PageHeader'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
-import Select from '../components/ui/Select'
 
 const reports = [
   { key: 'members', label: 'Member Report', desc: 'All members with contact details and status' },
@@ -63,25 +63,31 @@ export default function ReportsPage() {
         </div>
       </Card>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {reports.map((r) => (
-          <div key={r.key} className="flex flex-col justify-between rounded-xl border border-navy-200 bg-white p-5 shadow-sm">
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {reports.map((r, i) => (
+          <motion.div
+            key={r.key}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.06 }}
+            className="flex flex-col justify-between rounded-3xl border border-border bg-surface p-6 shadow-card"
+          >
             <div>
-              <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
+              <div className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-primary-50 text-primary">
                 <FileSpreadsheet className="h-5 w-5" />
               </div>
-              <h3 className="font-semibold text-navy-900">{r.label}</h3>
-              <p className="mt-1 text-sm text-navy-500">{r.desc}</p>
+              <h3 className="font-bold text-dark">{r.label}</h3>
+              <p className="mt-1 text-sm text-muted">{r.desc}</p>
             </div>
             <Button
-              variant="secondary"
-              className="mt-4 w-full"
+              variant="outline-primary"
+              className="mt-5 w-full"
               loading={exporting === r.key}
               onClick={() => handleExport(r.key)}
             >
               <Download className="h-4 w-4" /> Export Excel
             </Button>
-          </div>
+          </motion.div>
         ))}
       </div>
     </div>

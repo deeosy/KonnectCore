@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import api from '../services/api'
 import PageHeader from '../components/ui/PageHeader'
 import Button from '../components/ui/Button'
@@ -25,6 +26,26 @@ const emptyForm = {
   assignedOfficerId: '',
   status: 'active',
   notes: '',
+}
+
+const sectionVariants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.35 } },
+}
+
+function FormSection({ title, children, delay = 0 }) {
+  return (
+    <motion.div
+      variants={sectionVariants}
+      initial="hidden"
+      animate="visible"
+      transition={{ delay }}
+      className="rounded-3xl border border-border bg-surface p-6 shadow-card"
+    >
+      <h3 className="mb-5 text-base font-bold text-dark">{title}</h3>
+      {children}
+    </motion.div>
+  )
 }
 
 export default function MemberNew() {
@@ -88,8 +109,7 @@ export default function MemberNew() {
       />
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="rounded-xl border border-navy-200 bg-white p-6 shadow-sm">
-          <h3 className="mb-4 text-base font-semibold text-navy-900">Personal Information</h3>
+        <FormSection title="Personal Information" delay={0}>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Input label="First Name *" value={form.firstName} onChange={(e) => set('firstName', e.target.value)} required />
             <Input label="Last Name" value={form.lastName} onChange={(e) => set('lastName', e.target.value)} />
@@ -100,19 +120,18 @@ export default function MemberNew() {
               <Input label="ID Number" value={form.idNumber} onChange={(e) => set('idNumber', e.target.value)} />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-navy-700">Photo</label>
+              <label className="mb-1.5 block text-sm font-medium text-dark">Photo</label>
               <input
                 type="file"
                 accept="image/*"
                 onChange={(e) => setPhoto(e.target.files[0])}
-                className="w-full rounded-lg border border-navy-200 px-3 py-2 text-sm"
+                className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm text-dark outline-none transition-all duration-150 focus:border-primary focus:ring-2 focus:ring-primary-100"
               />
             </div>
           </div>
-        </div>
+        </FormSection>
 
-        <div className="rounded-xl border border-navy-200 bg-white p-6 shadow-sm">
-          <h3 className="mb-4 text-base font-semibold text-navy-900">Location</h3>
+        <FormSection title="Location" delay={0.05}>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Input label="Village / Town" value={form.location} onChange={(e) => set('location', e.target.value)} />
             <Input label="Region" value={form.region} onChange={(e) => set('region', e.target.value)} />
@@ -120,27 +139,26 @@ export default function MemberNew() {
             <Input label="GPS Latitude" type="number" step="any" value={form.gpsLat} onChange={(e) => set('gpsLat', e.target.value)} />
             <Input label="GPS Longitude" type="number" step="any" value={form.gpsLng} onChange={(e) => set('gpsLng', e.target.value)} />
           </div>
-        </div>
+        </FormSection>
 
-        <div className="rounded-xl border border-navy-200 bg-white p-6 shadow-sm">
-          <h3 className="mb-4 text-base font-semibold text-navy-900">Agriculture</h3>
+        <FormSection title="Agriculture" delay={0.1}>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Input label="Farm Size (hectares)" type="number" step="any" value={form.farmSize} onChange={(e) => set('farmSize', e.target.value)} />
             <Select label="Group" placeholder="Select group" options={groups.map((g) => ({ value: g._id, label: g.name }))} value={form.groupId} onChange={(e) => set('groupId', e.target.value)} />
             <Select label="Assigned Officer" placeholder="Select officer" options={officers.map((o) => ({ value: o._id, label: o.name }))} value={form.assignedOfficerId} onChange={(e) => set('assignedOfficerId', e.target.value)} />
           </div>
-          <div className="mt-4">
-            <label className="mb-2 block text-sm font-medium text-navy-700">Main Crops</label>
+          <div className="mt-5">
+            <label className="mb-2 block text-sm font-medium text-dark">Main Crops</label>
             <div className="flex flex-wrap gap-2">
               {CROPS.map((crop) => (
                 <button
                   key={crop}
                   type="button"
                   onClick={() => handleCropToggle(crop)}
-                  className={`rounded-full border px-3 py-1 text-sm transition-colors ${
+                  className={`rounded-full border px-3.5 py-1.5 text-sm font-medium transition-all duration-150 ${
                     form.mainCrops.includes(crop)
-                      ? 'border-brand-500 bg-brand-500 text-white'
-                      : 'border-navy-200 bg-white text-navy-600 hover:border-brand-300 hover:text-brand-600'
+                      ? 'border-primary bg-primary text-white shadow-sm'
+                      : 'border-border bg-surface text-muted hover:border-primary-300 hover:text-primary'
                   }`}
                 >
                   {crop}
@@ -148,22 +166,25 @@ export default function MemberNew() {
               ))}
             </div>
           </div>
-        </div>
+        </FormSection>
 
-        <div className="rounded-xl border border-navy-200 bg-white p-6 shadow-sm">
-          <h3 className="mb-4 text-base font-semibold text-navy-900">Membership</h3>
+        <FormSection title="Membership" delay={0.15}>
           <div className="grid gap-4 sm:grid-cols-2">
             <Select label="Status" options={MEMBER_STATUSES} value={form.status} onChange={(e) => set('status', e.target.value)} />
             <div className="sm:col-span-2">
               <Input label="Notes" value={form.notes} onChange={(e) => set('notes', e.target.value)} placeholder="Optional notes about this member" />
             </div>
           </div>
-        </div>
+        </FormSection>
 
         {error && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <motion.div
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-xl border border-danger-200 bg-danger-50 px-4 py-3 text-sm font-medium text-danger"
+          >
             {error}
-          </div>
+          </motion.div>
         )}
 
         <div className="flex justify-end gap-3">

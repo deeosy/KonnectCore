@@ -4,11 +4,10 @@ import {
   UserPlus,
   Layers,
   Sprout,
-  Package,
+  PackageCheck,
   Wallet,
   HandCoins,
-  MapPin,
-  FileText,
+  MapPinned,
   Settings,
   BarChart3,
 } from 'lucide-react'
@@ -30,10 +29,10 @@ export const navSections = [
   {
     title: 'Operations',
     items: [
-      { name: 'Collections', path: '/collections', icon: Package, roles: ['admin', 'manager', 'fieldOfficer'] },
+      { name: 'Collections', path: '/collections', icon: PackageCheck, roles: ['admin', 'manager', 'fieldOfficer'] },
       { name: 'Payments', path: '/payments', icon: Wallet, roles: ['admin', 'manager'] },
       { name: 'Loans', path: '/loans', icon: HandCoins, roles: ['admin', 'manager'] },
-      { name: 'Field Visits', path: '/visits', icon: MapPin, roles: ['admin', 'manager', 'fieldOfficer'] },
+      { name: 'Field Visits', path: '/visits', icon: MapPinned, roles: ['admin', 'manager', 'fieldOfficer'] },
     ],
   },
   {

@@ -12,6 +12,9 @@
     "seed": "npm run seed --prefix server"
   },
   "devDependencies": {
-    "concurrently": "^9.1.0"
+    "concurrently": "^10.0.5"
+  },
+  "dependencies": {
+    "mongoose": "^9.9.4"
   }
 }
