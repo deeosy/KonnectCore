@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { Sprout, Menu, X, LogOut, ChevronDown, Bell, Search } from 'lucide-react'
+import { Menu, X, LogOut, ChevronDown, Bell, Search } from 'lucide-react'
+import logo from '../assets/images/preferedlogo2.png'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
 import { navSections } from '../config/navigation'
@@ -29,13 +30,12 @@ export default function AppLayout() {
     <div className="flex h-full flex-col bg-dark">
       {/* Logo */}
       <div className={`flex h-16 shrink-0 items-center ${collapsed ? 'justify-center' : 'justify-between'} border-b border-dark-light px-5`}>
-        <Link to="/dashboard" className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary">
-            <Sprout className="h-5 w-5 text-white" />
-          </div>
-          {!collapsed && (
-            <span className="text-lg font-bold tracking-tight text-white">KonnectCore</span>
-          )}
+        <Link to="/dashboard" className={`flex items-center ${collapsed ? 'justify-center px-0' : 'gap-2'} min-w-0`}>
+          <img
+            src={logo}
+            alt="KonnectCore"
+            className={`h-auto w-auto max-h-9 object-contain transition-all ${collapsed ? 'max-w-9' : 'max-w-[140px]'}`}
+          />
         </Link>
         <div className="flex items-center gap-1">
           <button

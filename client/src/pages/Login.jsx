@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Sprout, Mail, Lock, ArrowRight } from 'lucide-react'
+import { Mail, Lock, ArrowRight } from 'lucide-react'
+import logo from '../assets/images/preferedlogo2.png'
 import { motion } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
 import Button from '../components/ui/Button'
@@ -47,12 +48,13 @@ export default function Login() {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="flex items-center gap-3"
+            className="flex items-center"
           >
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary">
-              <Sprout className="h-6 w-6 text-white" />
-            </div>
-            <span className="text-xl font-bold tracking-tight text-white">KonnectCore</span>
+            <img
+              src={logo}
+              alt="KonnectCore"
+              className="h-auto max-h-16 w-auto max-w-[180px] object-contain"
+            />
           </motion.div>
 
           {/* Hero content */}
@@ -102,11 +104,12 @@ export default function Login() {
           className="w-full max-w-md"
         >
           {/* Mobile logo */}
-          <div className="mb-8 flex items-center gap-2.5 lg:hidden">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
-              <Sprout className="h-5 w-5 text-white" />
-            </div>
-            <span className="text-xl font-bold tracking-tight text-dark">KonnectCore</span>
+          <div className="mb-8 flex items-center lg:hidden">
+            <img
+              src={logo}
+              alt="KonnectCore"
+              className="h-auto max-h-12 w-auto max-w-[160px] object-contain"
+            />
           </div>
 
           {/* Card */}
