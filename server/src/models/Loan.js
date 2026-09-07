@@ -1,4 +1,4 @@
-import mongoose from 'mongoose'
+import mongoose from "mongoose";
 
 const repaymentSchema = new mongoose.Schema(
   {
@@ -6,15 +6,15 @@ const repaymentSchema = new mongoose.Schema(
     date: { type: Date, default: Date.now },
     method: {
       type: String,
-      enum: ['deduction', 'cash', 'mobile_money', 'bank_transfer', 'other'],
-      default: 'deduction',
+      enum: ["deduction", "cash", "mobile_money", "bank_transfer", "other"],
+      default: "deduction",
     },
-    collectionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Collection' },
-    paymentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Payment' },
-    recordedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    collectionId: { type: mongoose.Schema.Types.ObjectId, ref: "Collection" },
+    paymentId: { type: mongoose.Schema.Types.ObjectId, ref: "Payment" },
+    recordedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   },
-  { timestamps: true }
-)
+  { timestamps: true },
+);
 
 const creditHistorySchema = new mongoose.Schema(
   {
@@ -22,28 +22,28 @@ const creditHistorySchema = new mongoose.Schema(
     date: { type: Date, default: Date.now },
     amount: { type: Number },
   },
-  { _id: false }
-)
+  { _id: false },
+);
 
 const loanSchema = new mongoose.Schema(
   {
     organisationId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Organisation',
+      ref: "Organisation",
     },
     memberId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Member',
-      required: [true, 'Member is required'],
+      ref: "Member",
+      required: [true, "Member is required"],
     },
     type: {
       type: String,
-      enum: ['input', 'cash', 'emergency', 'equipment'],
-      default: 'cash',
+      enum: ["input", "cash", "emergency", "equipment"],
+      default: "cash",
     },
     amount: {
       type: Number,
-      required: [true, 'Loan amount is required'],
+      required: [true, "Loan amount is required"],
     },
     interestRate: {
       type: Number,
@@ -51,8 +51,8 @@ const loanSchema = new mongoose.Schema(
     },
     interestType: {
       type: String,
-      enum: ['flat', 'reducing_balance'],
-      default: 'flat',
+      enum: ["flat", "reducing_balance"],
+      default: "flat",
     },
     durationMonths: {
       type: Number,
@@ -72,16 +72,23 @@ const loanSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['pending', 'approved', 'disbursed', 'completed', 'overdue', 'rejected'],
-      default: 'pending',
+      enum: [
+        "pending",
+        "approved",
+        "disbursed",
+        "completed",
+        "overdue",
+        "rejected",
+      ],
+      default: "pending",
     },
     requestedBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
     },
     approvedBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
     },
     approvedAt: {
       type: Date,
@@ -111,14 +118,17 @@ const loanSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
-)
+  },
+);
 
-loanSchema.pre('save', function (next) {
-  this.balance = Math.max(0, this.amount - this.amountRepaid)
-  next()
-})
+// A loan's balance is always derived from principal minus what has been
+// repaid. The pre-save hook clamps to zero so a fully-repaid loan never shows
+// a negative balance in UI or reports.
+loanSchema.pre("save", function (next) {
+  this.balance = Math.max(0, this.amount - this.amountRepaid);
+  next();
+});
 
-const Loan = mongoose.model('Loan', loanSchema)
+const Loan = mongoose.model("Loan", loanSchema);
 
-export default Loan
+export default Loan;

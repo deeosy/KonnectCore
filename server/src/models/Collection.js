@@ -1,28 +1,28 @@
-import mongoose from 'mongoose'
+import mongoose from "mongoose";
 
 const collectionSchema = new mongoose.Schema(
   {
     memberId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Member',
-      required: [true, 'Member is required'],
+      ref: "Member",
+      required: [true, "Member is required"],
     },
     crop: {
       type: String,
-      required: [true, 'Crop is required'],
+      required: [true, "Crop is required"],
     },
     quantity: {
       type: Number,
-      required: [true, 'Quantity/weight is required'],
+      required: [true, "Quantity/weight is required"],
     },
     unit: {
       type: String,
-      enum: ['kg', 'lb', 'bag', 'tonne'],
-      default: 'kg',
+      enum: ["kg", "lb", "bag", "tonne"],
+      default: "kg",
     },
     qualityGrade: {
       type: String,
-      default: 'A',
+      default: "A",
     },
     pricePerUnit: {
       type: Number,
@@ -48,7 +48,7 @@ const collectionSchema = new mongoose.Schema(
     },
     batchId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Batch',
+      ref: "Batch",
     },
     batchNumber: {
       type: String,
@@ -63,19 +63,23 @@ const collectionSchema = new mongoose.Schema(
     },
     capturedBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
     },
   },
   {
     timestamps: true,
-  }
-)
+  },
+);
 
-collectionSchema.pre('save', function (next) {
-  this.totalValue = (this.quantity || 0) * (this.pricePerUnit || 0)
-  next()
-})
+// Derive totalValue on every save so the value always matches quantity × price.
+// Doing this in the model (rather than the controller) guarantees consistency
+// even if a collection is created through another code path, and prevents a
+// stale totalValue if quantity or price changes later.
+collectionSchema.pre("save", function (next) {
+  this.totalValue = (this.quantity || 0) * (this.pricePerUnit || 0);
+  next();
+});
 
-const Collection = mongoose.model('Collection', collectionSchema)
+const Collection = mongoose.model("Collection", collectionSchema);
 
-export default Collection
+export default Collection;

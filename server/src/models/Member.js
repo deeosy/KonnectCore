@@ -1,4 +1,4 @@
-import mongoose from 'mongoose'
+import mongoose from "mongoose";
 
 const documentSchema = new mongoose.Schema(
   {
@@ -8,23 +8,27 @@ const documentSchema = new mongoose.Schema(
     fileType: { type: String },
     category: {
       type: String,
-      enum: ['id_card', 'photo', 'agreement', 'other'],
-      default: 'other',
+      enum: ["id_card", "photo", "agreement", "other"],
+      default: "other",
     },
-    uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   },
-  { timestamps: true }
-)
+  { timestamps: true },
+);
 
+// A member is the central entity in the system. Membership status is stored
+// here (not inferred) because a member can exist in the database while being
+// suspended or blacklisted — e.g. they may have outstanding loans or
+// historical collections that must remain queryable for reporting.
 const memberSchema = new mongoose.Schema(
   {
     organisationId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Organisation',
+      ref: "Organisation",
     },
     firstName: {
       type: String,
-      required: [true, 'First name is required'],
+      required: [true, "First name is required"],
       trim: true,
     },
     lastName: {
@@ -41,8 +45,8 @@ const memberSchema = new mongoose.Schema(
     },
     idType: {
       type: String,
-      enum: ['national_id', 'voter_id', 'passport', 'other'],
-      default: 'other',
+      enum: ["national_id", "voter_id", "passport", "other"],
+      default: "other",
     },
     idNumber: {
       type: String,
@@ -78,16 +82,16 @@ const memberSchema = new mongoose.Schema(
     },
     groupId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Group',
+      ref: "Group",
     },
     assignedOfficerId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
     },
     status: {
       type: String,
-      enum: ['active', 'inactive', 'suspended', 'blacklisted'],
-      default: 'active',
+      enum: ["active", "inactive", "suspended", "blacklisted"],
+      default: "active",
     },
     documents: {
       type: [documentSchema],
@@ -99,14 +103,14 @@ const memberSchema = new mongoose.Schema(
     },
     registeredBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
     },
   },
   {
     timestamps: true,
-  }
-)
+  },
+);
 
-const Member = mongoose.model('Member', memberSchema)
+const Member = mongoose.model("Member", memberSchema);
 
-export default Member
+export default Member;

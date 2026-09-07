@@ -1,11 +1,14 @@
-import Member from '../models/Member.js'
-import Group from '../models/Group.js'
-import Collection from '../models/Collection.js'
-import Payment from '../models/Payment.js'
-import Loan from '../models/Loan.js'
-import Expense from '../models/Expense.js'
-import FieldVisit from '../models/FieldVisit.js'
+import Member from "../models/Member.js";
+import Group from "../models/Group.js";
+import Collection from "../models/Collection.js";
+import Payment from "../models/Payment.js";
+import Loan from "../models/Loan.js";
+import Expense from "../models/Expense.js";
+import FieldVisit from "../models/FieldVisit.js";
 
+// All dashboard start queries run in parallel via Promise.all below. Firing
+// them off one after another would cost a separate MongoDB round-trip per
+// stat — on a busy dashboard for a large cooperative that adds up.
 export const getStats = async (req, res, next) => {
   try {
     const [
@@ -22,19 +25,29 @@ export const getStats = async (req, res, next) => {
       totalExpenses,
     ] = await Promise.all([
       Member.countDocuments({}),
-      Member.countDocuments({ status: 'active' }),
-      Group.countDocuments({ type: { $ne: 'organisation' } }),
+      Member.countDocuments({ status: "active" }),
+      Group.countDocuments({ type: { $ne: "organisation" } }),
       Collection.countDocuments({}),
-      Collection.aggregate([{ $group: { _id: null, total: { $sum: '$quantity' } } }]),
-      Payment.aggregate([
-        { $group: { _id: null, total: { $sum: '$amountPaid' } } },
+      Collection.aggregate([
+        { $group: { _id: null, total: { $sum: "$quantity" } } },
       ]),
-      Payment.aggregate([{ $match: { type: 'dues' } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
-      Payment.aggregate([{ $match: { type: 'dues', status: 'paid' } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
+      Payment.aggregate([
+        { $group: { _id: null, total: { $sum: "$amountPaid" } } },
+      ]),
+      Payment.aggregate([
+        { $match: { type: "dues" } },
+        { $group: { _id: null, total: { $sum: "$amount" } } },
+      ]),
+      Payment.aggregate([
+        { $match: { type: "dues", status: "paid" } },
+        { $group: { _id: null, total: { $sum: "$amount" } } },
+      ]),
       Loan.countDocuments({}),
-      Loan.aggregate([{ $group: { _id: null, total: { $sum: '$balance' } } }]),
-      Expense.aggregate([{ $group: { _id: null, total: { $sum: '$amount' } } }]),
-    ])
+      Loan.aggregate([{ $group: { _id: null, total: { $sum: "$balance" } } }]),
+      Expense.aggregate([
+        { $group: { _id: null, total: { $sum: "$amount" } } },
+      ]),
+    ]);
 
     const stats = {
       totalMembers,
@@ -45,108 +58,164 @@ export const getStats = async (req, res, next) => {
       totalPaymentsPaid: totalPaymentsPaid[0]?.total || 0,
       totalDuesOwed: totalDuesOwed[0]?.total || 0,
       totalDuesPaid: totalDuesPaid[0]?.total || 0,
-      outstandingDues: (totalDuesOwed[0]?.total || 0) - (totalDuesPaid[0]?.total || 0),
+      outstandingDues:
+        (totalDuesOwed[0]?.total || 0) - (totalDuesPaid[0]?.total || 0),
       totalLoans,
       totalLoansOutstanding: totalLoansOutstanding[0]?.total || 0,
       totalExpenses: totalExpenses[0]?.total || 0,
-    }
+    };
 
-    res.json({ success: true, data: stats })
+    res.json({ success: true, data: stats });
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
 
+// Fetches the latest of each activity type, then combines them into a single
+// timeline sorted by date. The limit is applied per-entity before merging
+// (hence the .limit in each query) to avoid pulling thousands of documents
+// just to show 12 recent feed items.
 export const getRecentActivity = async (req, res, next) => {
   try {
-    const limit = parseInt(req.query.limit) || 10
+    const limit = parseInt(req.query.limit) || 10;
     const [members, collections, payments, visits] = await Promise.all([
-      Member.find().select('firstName lastName photo createdAt').populate('registeredBy', 'name').sort('-createdAt').limit(limit).lean(),
-      Collection.find().select('crop quantity totalValue date').populate('memberId', 'firstName lastName').sort('-createdAt').limit(limit).lean(),
-      Payment.find().select('type amount status paymentDate').populate('memberId', 'firstName lastName').sort('-createdAt').limit(limit).lean(),
-      FieldVisit.find().select('notes date officerId').populate('officerId', 'name').sort('-createdAt').limit(limit).lean(),
-    ])
+      Member.find()
+        .select("firstName lastName photo createdAt")
+        .populate("registeredBy", "name")
+        .sort("-createdAt")
+        .limit(limit)
+        .lean(),
+      Collection.find()
+        .select("crop quantity totalValue date")
+        .populate("memberId", "firstName lastName")
+        .sort("-createdAt")
+        .limit(limit)
+        .lean(),
+      Payment.find()
+        .select("type amount status paymentDate")
+        .populate("memberId", "firstName lastName")
+        .sort("-createdAt")
+        .limit(limit)
+        .lean(),
+      FieldVisit.find()
+        .select("notes date officerId")
+        .populate("officerId", "name")
+        .sort("-createdAt")
+        .limit(limit)
+        .lean(),
+    ]);
 
     const activity = [
-      ...members.map((m) => ({ type: 'member', label: 'Member added', detail: `${m.firstName} ${m.lastName || ''}`, date: m.createdAt })),
-      ...collections.map((c) => ({ type: 'collection', label: 'Collection recorded', detail: `${c.memberId?.firstName || ''} - ${c.crop} ${c.quantity}kg`, date: c.createdAt })),
-      ...payments.map((p) => ({ type: 'payment', label: 'Payment recorded', detail: `${p.memberId?.firstName || ''} - GHS ${p.amount}`, date: p.createdAt })),
-      ...visits.map((v) => ({ type: 'visit', label: 'Field visit logged', detail: v.officerId?.name || '', date: v.createdAt })),
+      ...members.map((m) => ({
+        type: "member",
+        label: "Member added",
+        detail: `${m.firstName} ${m.lastName || ""}`,
+        date: m.createdAt,
+      })),
+      ...collections.map((c) => ({
+        type: "collection",
+        label: "Collection recorded",
+        detail: `${c.memberId?.firstName || ""} - ${c.crop} ${c.quantity}kg`,
+        date: c.createdAt,
+      })),
+      ...payments.map((p) => ({
+        type: "payment",
+        label: "Payment recorded",
+        detail: `${p.memberId?.firstName || ""} - GHS ${p.amount}`,
+        date: p.createdAt,
+      })),
+      ...visits.map((v) => ({
+        type: "visit",
+        label: "Field visit logged",
+        detail: v.officerId?.name || "",
+        date: v.createdAt,
+      })),
     ]
       .sort((a, b) => new Date(b.date) - new Date(a.date))
-      .slice(0, 12)
+      .slice(0, 12);
 
-    res.json({ success: true, data: activity })
+    res.json({ success: true, data: activity });
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
 
 export const getCollectionTrend = async (req, res, next) => {
   try {
-    const days = parseInt(req.query.days) || 30
-    const since = new Date()
-    since.setDate(since.getDate() - days)
+    const days = parseInt(req.query.days) || 30;
+    const since = new Date();
+    since.setDate(since.getDate() - days);
 
     const trend = await Collection.aggregate([
       { $match: { date: { $gte: since } } },
       {
         $group: {
-          _id: { $dateToString: { format: '%Y-%m-%d', date: '$date' } },
-          total: { $sum: '$quantity' },
+          _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } },
+          total: { $sum: "$quantity" },
           count: { $sum: 1 },
         },
       },
       { $sort: { _id: 1 } },
-    ])
+    ]);
 
-    res.json({ success: true, data: trend })
+    res.json({ success: true, data: trend });
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
 
 export const getPaymentBreakdown = async (req, res, next) => {
   try {
     const byStatus = await Payment.aggregate([
-      { $group: { _id: '$status', total: { $sum: '$amount' }, count: { $sum: 1 } } },
-    ])
+      {
+        $group: {
+          _id: "$status",
+          total: { $sum: "$amount" },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
     const byMethod = await Payment.aggregate([
-      { $group: { _id: '$method', total: { $sum: '$amount' } } },
-    ])
-    res.json({ success: true, data: { byStatus, byMethod } })
+      { $group: { _id: "$method", total: { $sum: "$amount" } } },
+    ]);
+    res.json({ success: true, data: { byStatus, byMethod } });
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
 
 export const getMemberDistribution = async (req, res, next) => {
   try {
     const byStatus = await Member.aggregate([
-      { $group: { _id: '$status', count: { $sum: 1 } } },
-    ])
+      { $group: { _id: "$status", count: { $sum: 1 } } },
+    ]);
     const byGroup = await Member.aggregate([
       { $match: { groupId: { $ne: null } } },
       {
         $group: {
-          _id: '$groupId',
+          _id: "$groupId",
           count: { $sum: 1 },
         },
       },
       {
-        $lookup: { from: 'groups', localField: '_id', foreignField: '_id', as: 'group' },
+        $lookup: {
+          from: "groups",
+          localField: "_id",
+          foreignField: "_id",
+          as: "group",
+        },
       },
       {
         $project: {
           count: 1,
-          name: { $arrayElemAt: ['$group.name', 0] },
+          name: { $arrayElemAt: ["$group.name", 0] },
         },
       },
       { $sort: { count: -1 } },
       { $limit: 10 },
-    ])
-    res.json({ success: true, data: { byStatus, byGroup } })
+    ]);
+    res.json({ success: true, data: { byStatus, byGroup } });
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};

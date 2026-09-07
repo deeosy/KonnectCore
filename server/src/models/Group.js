@@ -1,14 +1,17 @@
-import mongoose from 'mongoose'
+import mongoose from "mongoose";
 
+// Groups form a self-referencing hierarchy (Organisation > Region > District
+// > Group > Community). parentId links a group to its parent; leaderId points
+// to a staff User account that is responsible for the group.
 const groupSchema = new mongoose.Schema(
   {
     organisationId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Organisation',
+      ref: "Organisation",
     },
     name: {
       type: String,
-      required: [true, 'Group name is required'],
+      required: [true, "Group name is required"],
       trim: true,
     },
     description: {
@@ -17,17 +20,17 @@ const groupSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['organisation', 'region', 'district', 'group', 'community'],
-      default: 'group',
+      enum: ["organisation", "region", "district", "group", "community"],
+      default: "group",
     },
     parentId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Group',
+      ref: "Group",
       default: null,
     },
     leaderId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
     },
     location: {
       type: String,
@@ -35,14 +38,14 @@ const groupSchema = new mongoose.Schema(
     },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
     },
   },
   {
     timestamps: true,
-  }
-)
+  },
+);
 
-const Group = mongoose.model('Group', groupSchema)
+const Group = mongoose.model("Group", groupSchema);
 
-export default Group
+export default Group;

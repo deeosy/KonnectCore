@@ -1,20 +1,22 @@
-import jwt from 'jsonwebtoken'
-import User from '../models/User.js'
-import { ApiError } from '../middleware/error.middleware.js'
+import jwt from "jsonwebtoken";
+import User from "../models/User.js";
+import { ApiError } from "../middleware/error.middleware.js";
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
-  })
-}
+    expiresIn: process.env.JWT_EXPIRES_IN || "7d",
+  });
+};
 
+// Public self-registration. New signups are always field officers — the only
+// way to obtain a higher-privilege role is for an admin to promote the user.
 export const register = async (req, res, next) => {
   try {
-    const { name, email, password, phone } = req.body
+    const { name, email, password, phone } = req.body;
 
-    const existing = await User.findOne({ email })
+    const existing = await User.findOne({ email });
     if (existing) {
-      throw new ApiError(400, 'User with this email already exists')
+      throw new ApiError(400, "User with this email already exists");
     }
 
     const user = await User.create({
@@ -22,8 +24,8 @@ export const register = async (req, res, next) => {
       email,
       password,
       phone,
-      role: 'fieldOfficer',
-    })
+      role: "fieldOfficer",
+    });
 
     res.status(201).json({
       success: true,
@@ -35,27 +37,34 @@ export const register = async (req, res, next) => {
         phone: user.phone,
         token: generateToken(user._id),
       },
-    })
+    });
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
 
+// Deactivated accounts are blocked at login time with a distinct HTTP status
+// (403 vs 401) so the client can differentiate "bad credentials" from
+// "account locked" messaging. The deactivation also takes effect through the
+// protect middleware on already-issued tokens (it re-checks isActive).
 export const login = async (req, res, next) => {
   try {
-    const { email, password } = req.body
+    const { email, password } = req.body;
 
     if (!email || !password) {
-      throw new ApiError(400, 'Email and password are required')
+      throw new ApiError(400, "Email and password are required");
     }
 
-    const user = await User.findOne({ email })
+    const user = await User.findOne({ email });
     if (!user || !(await user.matchPassword(password))) {
-      throw new ApiError(401, 'Invalid email or password')
+      throw new ApiError(401, "Invalid email or password");
     }
 
     if (!user.isActive) {
-      throw new ApiError(403, 'Account is deactivated. Contact an administrator.')
+      throw new ApiError(
+        403,
+        "Account is deactivated. Contact an administrator.",
+      );
     }
 
     res.json({
@@ -71,17 +80,17 @@ export const login = async (req, res, next) => {
         organisationId: user.organisationId,
         token: generateToken(user._id),
       },
-    })
+    });
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
 
 export const getMe = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user._id).select('-password')
-    res.json({ success: true, data: user })
+    const user = await User.findById(req.user._id).select("-password");
+    res.json({ success: true, data: user });
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};

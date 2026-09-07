@@ -1,60 +1,97 @@
-import { useState } from 'react'
-import { Download, FileSpreadsheet } from 'lucide-react'
-import { motion } from 'framer-motion'
-import PageHeader from '../components/ui/PageHeader'
-import Card from '../components/ui/Card'
-import Button from '../components/ui/Button'
-import Input from '../components/ui/Input'
+import { useState } from "react";
+import { Download, FileSpreadsheet } from "lucide-react";
+import { motion } from "framer-motion";
+import PageHeader from "../components/ui/PageHeader";
+import Card from "../components/ui/Card";
+import Button from "../components/ui/Button";
+import Input from "../components/ui/Input";
 
 const reports = [
-  { key: 'members', label: 'Member Report', desc: 'All members with contact details and status' },
-  { key: 'collections', label: 'Collection / Harvest Report', desc: 'Harvests by crop, date, group and member' },
-  { key: 'payments', label: 'Payment Report', desc: 'Payments by status and date range' },
-  { key: 'groups', label: 'Group Summary', desc: 'Members, harvest and payment summaries by group' },
-  { key: 'loans', label: 'Loan Report', desc: 'Loans outstanding, repaid and status' },
-]
+  {
+    key: "members",
+    label: "Member Report",
+    desc: "All members with contact details and status",
+  },
+  {
+    key: "collections",
+    label: "Collection / Harvest Report",
+    desc: "Harvests by crop, date, group and member",
+  },
+  {
+    key: "payments",
+    label: "Payment Report",
+    desc: "Payments by status and date range",
+  },
+  {
+    key: "groups",
+    label: "Group Summary",
+    desc: "Members, harvest and payment summaries by group",
+  },
+  {
+    key: "loans",
+    label: "Loan Report",
+    desc: "Loans outstanding, repaid and status",
+  },
+];
 
 export default function ReportsPage() {
-  const [from, setFrom] = useState('')
-  const [to, setTo] = useState('')
-  const [exporting, setExporting] = useState('')
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [exporting, setExporting] = useState("");
 
   const handleExport = async (key) => {
-    setExporting(key)
+    setExporting(key);
     try {
-      const params = new URLSearchParams({ format: 'xlsx' })
-      if (from) params.set('from', from)
-      if (to) params.set('to', to)
-      const token = localStorage.getItem('token')
+      const params = new URLSearchParams({ format: "xlsx" });
+      if (from) params.set("from", from);
+      if (to) params.set("to", to);
+      // Uses raw fetch rather than the api axios instance so the response can
+      // be read as a Blob without axios buffering it as JSON. The auth token
+      // is attached manually since the request interceptor only runs on the
+      // shared axios instance.
+      const token = localStorage.getItem("token");
       const res = await fetch(`/api/reports/${key}?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
-      })
-      if (!res.ok) throw new Error('Export failed')
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${key}-report.xlsx`
-      a.click()
-      URL.revokeObjectURL(url)
+      });
+      if (!res.ok) throw new Error("Export failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${key}-report.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
     } catch (err) {
-      alert(err.message)
+      alert(err.message);
     } finally {
-      setExporting('')
+      setExporting("");
     }
-  }
+  };
 
   return (
     <div>
       <PageHeader title="Reports" subtitle="Generate and export reports" />
       <Card className="mb-6">
         <div className="grid gap-4 sm:grid-cols-3">
-          <Input label="From Date" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-          <Input label="To Date" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+          <Input
+            label="From Date"
+            type="date"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+          />
+          <Input
+            label="To Date"
+            type="date"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+          />
           <div className="flex items-end">
             <Button
               variant="outline"
-              onClick={() => { setFrom(''); setTo('') }}
+              onClick={() => {
+                setFrom("");
+                setTo("");
+              }}
               className="w-full"
             >
               Clear Dates
@@ -91,5 +128,5 @@ export default function ReportsPage() {
         ))}
       </div>
     </div>
-  )
+  );
 }
