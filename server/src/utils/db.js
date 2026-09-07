@@ -30,8 +30,30 @@ const configureDns = () => {
 export const connectDB = async () => {
   configureDns();
 
+  // The connection string may omit the database path (e.g. a manual
+  // mongodb://host:27017 URI with no trailing /<db>). In that case MongoDB
+  // silently connects to the "test" database and every query hits empty
+  // collections — logins fail, dashboards show nothing. Default the database
+  // name (DB_NAME env, falling back to "konnectcore") when the path is absent
+  // so a missing segment can't cause that behavior. String surgery on the
+  // pre-query portion avoids re-serializing the whole URI (which could encode
+  // credentials differently).
+  let uri = process.env.MONGODB_URI.trim();
+  const dbName = process.env.DB_NAME || "konnectcore";
+  const queryIdx = uri.indexOf("?");
+  const head = queryIdx === -1 ? uri : uri.slice(0, queryIdx);
+  // The authority (everything between :// and the first / or end) may look
+  // like a path segment (e.g. "user:pass@host:27017"), so only a slash that
+  // is NOT the trailing character counts as an explicit database path.
+  const authorityTail = head.slice(head.indexOf("://") + 3);
+  const hasDbPath = authorityTail.includes("/") && !authorityTail.endsWith("/");
+  if (!hasDbPath) {
+    const prefix = head.endsWith("/") ? head : `${head}/`;
+    uri = `${prefix}${dbName}${queryIdx === -1 ? "" : uri.slice(queryIdx)}`;
+  }
+
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI, {
+    const conn = await mongoose.connect(uri, {
       serverSelectionTimeoutMS: 10000,
     });
     console.log(`MongoDB connected: ${conn.connection.host}`);
