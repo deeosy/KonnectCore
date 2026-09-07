@@ -16,6 +16,6 @@
   },
   "dependencies": {
     "framer-motion": "^13.2.0",
-    "mongoose": "^9.9.4"
+    "mongoose": "^8.12.1"
   }
 }

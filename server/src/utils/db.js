@@ -1,14 +1,27 @@
+import dns from 'dns'
 import mongoose from 'mongoose'
 import dotenv from 'dotenv'
-import dns from 'dns'
-
-// Workaround for broken system DNS: force Node's resolver to use a public
-// DNS server (Google) so Atlas hostnames can be resolved reliably.
-dns.setServers(['8.8.8.8', '8.8.4.4'])
 
 dotenv.config()
 
+const configureDns = () => {
+  const { DNS_SERVERS } = process.env
+  const dnsServers = (DNS_SERVERS || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+
+  if (dnsServers.length > 0) {
+    dns.setServers(dnsServers)
+    console.log(`Using custom DNS servers: ${dnsServers.join(', ')}`)
+  } else {
+    console.log(`Using system DNS servers: ${dns.getServers().join(', ') || 'system default'}`)
+  }
+}
+
 export const connectDB = async () => {
+  configureDns()
+
   try {
     const conn = await mongoose.connect(process.env.MONGODB_URI, {
       serverSelectionTimeoutMS: 10000,
@@ -16,7 +29,26 @@ export const connectDB = async () => {
     console.log(`MongoDB connected: ${conn.connection.host}`)
     return conn
   } catch (error) {
-    console.error(`MongoDB connection error: ${error.message}`)
+    console.error('\n==========================================================')
+    console.error('MongoDB connection failed')
+    console.error(`Reason: ${error.message}`)
+    console.error(
+      'If using a mongodb+srv:// URI, the SRV DNS record could not be',
+      'resolved on this machine.'
+    )
+    console.error('Troubleshooting:')
+    console.error(
+      '  1. Check that MONGODB_URI in server/.env is correct and the database is reachable.'
+    )
+    console.error(
+      '  2. If DNS resolution is unreliable, set DNS_SERVERS to one or more resolvers'
+    )
+    console.error('     (comma-separated IPs), e.g. DNS_SERVERS=8.8.8.8,1.1.1.1')
+    console.error(
+      '  3. If SRV records cannot be resolved at all, use a direct mongodb:// connection'
+    )
+    console.error('     string or a local MongoDB instance instead.')
+    console.error('==========================================================\n')
     process.exit(1)
   }
 }
