@@ -37,3 +37,6 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# Local project documentation (do not push to GitHub)
+README.md
