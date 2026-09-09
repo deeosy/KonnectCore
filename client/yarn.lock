@@ -518,6 +518,11 @@ jiti@^2.7.0, jiti@>=1.21.0:
   resolved "https://registry.npmjs.org/jiti/-/jiti-2.7.0.tgz"
   integrity sha512-AC/7JofJvZGrrneWNaEnJeOLUx+JlGt7tNa0wZiRPT4MY1wmfKjt2+6O2p2uz2+skll8OZZmJMNqeke7kKbNgQ==
 
+lenis@^1.3.26:
+  version "1.3.26"
+  resolved "https://registry.npmjs.org/lenis/-/lenis-1.3.26.tgz"
+  integrity sha512-s/xTCZCxTFvHbAN1OzuhNaN5YPJH2ail0XAkctKW1b+RUAG4nUL5UHLXwNko1h8aEeT2jspBXegMgPJd8zcuag==
+
 lightningcss-win32-x64-msvc@1.32.0:
   version "1.32.0"
   resolved "https://registry.npmjs.org/lightningcss-win32-x64-msvc/-/lightningcss-win32-x64-msvc-1.32.0.tgz"
@@ -681,6 +686,11 @@ react-hot-toast@^2.6.0:
     csstype "^3.1.3"
     goober "^2.1.16"
 
+react-icons@^5.7.0:
+  version "5.7.0"
+  resolved "https://registry.npmjs.org/react-icons/-/react-icons-5.7.0.tgz"
+  integrity sha512-LBLy340Rzqy6+/yVhZKT3B/QpP1BZaesGqasf09HPOBzRarcDIFH0WwXlXQfE7q7ipxK4MSiC5DIBWURCny6fw==
+
 "react-is@^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0":
   version "19.2.8"
   resolved "https://registry.npmjs.org/react-is/-/react-is-19.2.8.tgz"
@@ -709,7 +719,7 @@ react-router@7.18.3:
     cookie "^1.0.1"
     set-cookie-parser "^2.6.0"
 
-"react@^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0", "react@^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0", "react@^16.9.0 || ^17.0.0 || ^18 || ^19", "react@^18.0 || ^19", "react@^18.0.0 || ^19.0.0", react@^19.2.8, react@>=16, react@>=18:
+react@*, "react@^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0", "react@^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0", "react@^16.9.0 || ^17.0.0 || ^18 || ^19", "react@^18.0 || ^19", "react@^18.0.0 || ^19.0.0", react@^19.2.8, react@>=16, react@>=17.0.0, react@>=18:
   version "19.2.8"
   resolved "https://registry.npmjs.org/react/-/react-19.2.8.tgz"
   integrity sha512-PWaYA1L/q9u2u7xYQi+Y3L3Yfnie7XyLeaJICV1MGD6LprsBxcAqGjYyr0eY3p+QdsA+x/Irkt4Qif8D63+Sbw==

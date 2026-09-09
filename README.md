@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # KonnectCore
 
 KonnectCore is an agricultural cooperative management platform built for Ghanaian farmer organisations.
@@ -623,3 +624,7 @@ KonnectCore/
 - **Audit Trail (Phase 11)** — not started; no `AuditLog` model or middleware exists.
 - **MVP boundary:** disease/pest monitoring and detailed input inventory are intentionally outside the first Validation MVP.
 - **Estimated overall MVP completion:** roughly 55–60% end-to-end. Backend-only coverage is much higher (~90% of MVP APIs exist); the missing portion is overwhelmingly frontend workflow UI.
+=======
+# KonnectCoreSoftware
+KonnectCore is a management platform for farmer-based organisations, cooperatives, associations and other organised agricultural groups
+>>>>>>> KonnectCore/main
