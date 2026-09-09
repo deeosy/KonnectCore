@@ -1,6 +1,7 @@
 import Loan from "../models/Loan.js";
 import Collection from "../models/Collection.js";
 import { ApiError } from "../middleware/error.middleware.js";
+import { markOverdueLoans } from "../services/overdue.service.js";
 
 // Total amount the borrower owes including interest. Two interest models are
 // supported:
@@ -107,7 +108,10 @@ export const requestLoan = async (req, res, next) => {
     const member = await Member.findById(memberId);
     if (!member) throw new ApiError(404, "Member not found");
 
-    const creditScore = await calcCreditScore(memberId);
+    // Pass the ObjectId (not the raw request string) — Mongo aggregation
+    // $match does not cast strings to ObjectId, so a string here silently
+    // matches nothing and every credit score would come back as zero.
+    const creditScore = await calcCreditScore(member._id);
 
     const loan = await Loan.create({
       memberId,
@@ -223,9 +227,11 @@ export const recordRepayment = async (req, res, next) => {
 export const autoDeductFromHarvest = async (req, res, next) => {
   try {
     const { memberId } = req.body;
+    // Overdue loans are still being collected on, so include them in the
+    // auto-deduction sweep alongside active ones.
     const activeLoans = await Loan.find({
       memberId,
-      status: { $in: ["disbursed", "approved"] },
+      status: { $in: ["disbursed", "approved", "overdue"] },
     });
 
     if (!activeLoans.length) {
@@ -234,7 +240,12 @@ export const autoDeductFromHarvest = async (req, res, next) => {
 
     const results = [];
     for (const loan of activeLoans) {
-      const owed = loan.amount - loan.amountRepaid;
+      // Outstanding includes accrued interest so the deduction target matches
+      // the completion threshold used by recordRepayment.
+      const totalRepayable = loan.interestRate
+        ? computeTotalRepayable(loan)
+        : loan.amount;
+      const owed = totalRepayable - loan.amountRepaid;
       if (owed <= 0) continue;
 
       const deduction = Math.min(owed, 0.3 * (req.body.produceValue || 0));
@@ -254,24 +265,13 @@ export const autoDeductFromHarvest = async (req, res, next) => {
   }
 };
 
-// Marks loans as overdue when their dueDate has passed. The update is
-// batched (rather than per-loan save) so a single call handles all overdue
-// loans. This is invoked manually via the /overdue endpoint; there is no
-// scheduled job, so administrators must trigger it periodically.
+// Marks loans as overdue when their dueDate has passed. The overdue check
+// itself lives in overdue.service.js so it can also run as a scheduled job
+// (see index.js). This endpoint allows an administrator to trigger the same
+// sweep on demand.
 export const checkOverdue = async (req, res, next) => {
   try {
-    const now = new Date();
-    const overdue = await Loan.find({
-      status: { $in: ["disbursed", "approved"] },
-      dueDate: { $lt: now },
-    });
-
-    if (overdue.length) {
-      await Loan.updateMany(
-        { _id: { $in: overdue.map((l) => l._id) } },
-        { status: "overdue" },
-      );
-    }
+    await markOverdueLoans();
 
     const overdueList = await Loan.find({ status: "overdue" }).populate(
       "memberId",

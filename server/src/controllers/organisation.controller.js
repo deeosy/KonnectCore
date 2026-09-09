@@ -10,6 +10,31 @@ export const getOrganisations = async (req, res, next) => {
   }
 }
 
+// Returns just the settings of the requesting user's own organisation. This is
+// used by the client to drive dropdown options (crops, quality grades,
+// seasons) and to auto-fill the default crop price on collection forms.
+export const getOrgSettings = async (req, res, next) => {
+  try {
+    let org = null
+    if (req.user.organisationId) {
+      org = await Organisation.findById(req.user.organisationId)
+    }
+
+    const defaults = { currency: 'GHS', qualityGrades: ['A', 'B', 'C'], seasons: ['Major', 'Minor'] }
+    res.json({
+      success: true,
+      data: {
+        currency: org?.settings?.currency || defaults.currency,
+        defaultCropPrices: org?.settings?.defaultCropPrices || {},
+        qualityGrades: org?.settings?.qualityGrades || defaults.qualityGrades,
+        seasons: org?.settings?.seasons || defaults.seasons,
+      },
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 export const getOrganisation = async (req, res, next) => {
   try {
     const organisation = await Organisation.findById(req.params.id)

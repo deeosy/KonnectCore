@@ -5,14 +5,16 @@ import ToastProvider from './components/ui/ToastProvider'
 import AppLayout from './layouts/AppLayout'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
-import ComingSoon from './pages/ComingSoon'
 import Members from './pages/Members'
 import MemberNew from './pages/MemberNew'
 import MemberDetail from './pages/MemberDetail'
 import GroupsPage from './pages/GroupsPage'
+import FarmsPage from './pages/FarmsPage'
 import CollectionsPage from './pages/CollectionsPage'
 import PaymentsPage from './pages/PaymentsPage'
+import ExpensesPage from './pages/ExpensesPage'
 import LoansPage from './pages/LoansPage'
+import LoanDetailPage from './pages/LoanDetailPage'
 import VisitsPage from './pages/VisitsPage'
 import ReportsPage from './pages/ReportsPage'
 import UsersPage from './pages/UsersPage'
@@ -56,11 +58,12 @@ function App() {
               path="/farms"
               element={
                 <ProtectedRoute roles={['admin', 'manager']}>
-                  <ComingSoon title="Farms & Crops" subtitle="Record farm and crop profiles for members" />
+                  <FarmsPage />
                 </ProtectedRoute>
               }
             />
             <Route path="/collections" element={<CollectionsPage />} />
+            <Route path="/collections/new" element={<CollectionsPage autoOpen />} />
             <Route
               path="/payments"
               element={
@@ -70,10 +73,26 @@ function App() {
               }
             />
             <Route
+              path="/expenses"
+              element={
+                <ProtectedRoute roles={['admin', 'manager']}>
+                  <ExpensesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/loans"
               element={
                 <ProtectedRoute roles={['admin', 'manager']}>
                   <LoansPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/loans/:id"
+              element={
+                <ProtectedRoute roles={['admin', 'manager', 'fieldOfficer']}>
+                  <LoanDetailPage />
                 </ProtectedRoute>
               }
             />

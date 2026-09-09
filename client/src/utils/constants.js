@@ -65,6 +65,7 @@ export const LOAN_STATUSES = [
   { value: 'disbursed', label: 'Disbursed' },
   { value: 'completed', label: 'Completed' },
   { value: 'overdue', label: 'Overdue' },
+  { value: 'rejected', label: 'Rejected' },
 ]
 
 export const ROLES = [

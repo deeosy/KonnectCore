@@ -7,15 +7,23 @@ import {
   updatePayment,
   deletePayment,
   getOutstanding,
+  getPaymentGatewayStatus,
+  hubtelCallback,
 } from '../controllers/payment.controller.js'
 import { protect, authorize } from '../middleware/auth.middleware.js'
 
 const router = Router()
 
+// Public webhook target for Hubtel transaction notifications. This must NOT
+// require authentication - Hubtel has no KonnectCore JWT. Live deployments
+// should verify the Hubtel signature header inside hubtelCallback.
+router.post('/hubtel/callback', hubtelCallback)
+
 router.use(protect)
 
 router.get('/outstanding', authorize('admin', 'manager'), getOutstanding)
 router.post('/produce', authorize('admin', 'manager', 'fieldOfficer'), createProducePayment)
+router.get('/:id/status', authorize('admin', 'manager'), getPaymentGatewayStatus)
 
 router
   .route('/')

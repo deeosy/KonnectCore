@@ -38,6 +38,28 @@ const paymentSchema = new mongoose.Schema(
       enum: ["pending", "paid", "part_paid", "cancelled"],
       default: "pending",
     },
+    // Payment gateway integration (Hubtel mobile money). Payments recorded by
+    // other methods carry gateway: 'not_applicable'. Mobile money payments
+    // initiated without Hubtel credentials are marked simulated so the dev/demo
+    // flow works end to end without exposing fake transactions as real ones.
+    gateway: {
+      type: String,
+      enum: ["not_applicable", "hubtel"],
+      default: "not_applicable",
+    },
+    gatewayReference: {
+      type: String,
+      trim: true,
+    },
+    gatewayStatus: {
+      type: String,
+      enum: ["pending", "success", "failed", ""],
+      default: "",
+    },
+    simulated: {
+      type: Boolean,
+      default: false,
+    },
     receiptNumber: {
       type: String,
       trim: true,

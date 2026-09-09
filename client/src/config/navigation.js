@@ -6,6 +6,7 @@ import {
   Sprout,
   PackageCheck,
   Wallet,
+  Receipt,
   HandCoins,
   MapPinned,
   Settings,
@@ -31,6 +32,7 @@ export const navSections = [
     items: [
       { name: 'Collections', path: '/collections', icon: PackageCheck, roles: ['admin', 'manager', 'fieldOfficer'] },
       { name: 'Payments', path: '/payments', icon: Wallet, roles: ['admin', 'manager'] },
+      { name: 'Expenses', path: '/expenses', icon: Receipt, roles: ['admin', 'manager'] },
       { name: 'Loans', path: '/loans', icon: HandCoins, roles: ['admin', 'manager'] },
       { name: 'Field Visits', path: '/visits', icon: MapPinned, roles: ['admin', 'manager', 'fieldOfficer'] },
     ],

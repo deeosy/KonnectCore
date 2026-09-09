@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+﻿import { useEffect, useState, useCallback } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   ArrowLeft,
   Phone,
@@ -12,6 +12,8 @@ import {
   Package,
   Wallet,
   HandCoins,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../services/api";
@@ -23,7 +25,9 @@ import Input from "../components/ui/Input";
 import Select from "../components/ui/Select";
 import Avatar from "../components/ui/Avatar";
 import { formatCurrency, formatDate } from "../utils/format";
-import { CROPS, QUALITY_GRADES } from "../utils/constants";
+import { CROPS } from "../utils/constants";
+import CollectionModal from "../components/collections/CollectionModal";
+import LoanRequestModal from "../components/loans/LoanRequestModal";
 
 const tabs = [
   { key: "overview", label: "Overview", icon: User },
@@ -54,7 +58,7 @@ export default function MemberDetail() {
       setMember(memberRes.data.data);
       setHistory(historyRes.data.data);
       // A farm profile may legitimately not exist for a member, so a 404 here
-      // is expected and not an error — leave farm as null and let the tab
+      // is expected and not an error â€” leave farm as null and let the tab
       // render its empty state.
       const farmRes = await api.get(`/farms/member/${id}`).catch(() => null);
       setFarm(farmRes?.data?.data || null);
@@ -83,11 +87,11 @@ export default function MemberDetail() {
   }
 
   const infoItems = [
-    { icon: Phone, label: "Phone", value: member.phone || "—" },
+    { icon: Phone, label: "Phone", value: member.phone || "â€”" },
     {
       icon: Hash,
       label: "ID Number",
-      value: `${member.idType || ""} ${member.idNumber || ""}`.trim() || "—",
+      value: `${member.idType || ""} ${member.idNumber || ""}`.trim() || "â€”",
     },
     {
       icon: MapPin,
@@ -95,12 +99,12 @@ export default function MemberDetail() {
       value:
         [member.location, member.district, member.region]
           .filter(Boolean)
-          .join(", ") || "—",
+          .join(", ") || "â€”",
     },
     {
       icon: MapPin,
       label: "GPS",
-      value: member.gpsLat ? `${member.gpsLat}, ${member.gpsLng}` : "—",
+      value: member.gpsLat ? `${member.gpsLat}, ${member.gpsLng}` : "â€”",
     },
   ];
 
@@ -198,12 +202,12 @@ export default function MemberDetail() {
           <FarmTab member={member} farm={farm} onRefresh={load} />
         )}
         {tab === "collections" && (
-          <CollectionsTab collections={history?.collections || []} />
+          <CollectionsTab member={member} collections={history?.collections || []} onRefresh={load} />
         )}
         {tab === "payments" && (
           <PaymentsTab payments={history?.payments || []} />
         )}
-        {tab === "loans" && <LoansTab loans={history?.loans || []} />}
+        {tab === "loans" && <LoansTab member={member} loans={history?.loans || []} onRefresh={load} />}
         {tab === "documents" && (
           <DocumentsTab member={member} onRefresh={load} />
         )}
@@ -212,7 +216,7 @@ export default function MemberDetail() {
       <CollectionModal
         open={collectionOpen}
         onClose={() => setCollectionOpen(false)}
-        memberId={member._id}
+        member={member}
         onSaved={() => {
           setCollectionOpen(false);
           load();
@@ -234,15 +238,15 @@ function OverviewTab({ member, farm, history }) {
           {[
             {
               label: "Farm Size",
-              value: `${farm?.farmSize ?? member.farmSize ?? "—"} ha`,
+              value: `${farm?.farmSize ?? member.farmSize ?? "â€”"} ha`,
             },
             {
               label: "Main Crops",
-              value: (member.mainCrops || []).join(", ") || "—",
+              value: (member.mainCrops || []).join(", ") || "â€”",
             },
             {
               label: "Assigned Officer",
-              value: member.assignedOfficerId?.name || "—",
+              value: member.assignedOfficerId?.name || "â€”",
             },
             { label: "Registered", value: formatDate(member.createdAt) },
           ].map((item) => (
@@ -288,117 +292,236 @@ function OverviewTab({ member, farm, history }) {
   );
 }
 
+const CROP_STATUSES = [
+  { value: "planted", label: "Planted" },
+  { value: "growing", label: "Growing" },
+  { value: "harvested", label: "Harvested" },
+  { value: "failed", label: "Failed" },
+]
+
+const CROP_STATUS_STYLES = {
+  planted: "bg-primary-50 text-primary-700 border-primary-200",
+  growing: "bg-info-50 text-secondary-700 border-info-100",
+  harvested: "bg-success-50 text-success-700 border-success-200",
+  failed: "bg-danger-50 text-danger-700 border-danger-200",
+}
+
+function formatDateToInput(date) {
+  if (!date) return ""
+  const d = new Date(date)
+  if (Number.isNaN(d.getTime())) return ""
+  return d.toISOString().slice(0, 10)
+}
+
 function FarmTab({ member, farm, onRefresh }) {
-  const [open, setOpen] = useState(false);
-  const crops = farm?.crops || [];
+  const [cropModal, setCropModal] = useState({ open: false, crop: null })
+  const [farmModal, setFarmModal] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const crops = farm?.crops || []
+
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
         <h3 className="text-base font-bold text-dark">
           Farm Profile {farm?.farmSize ? `- ${farm.farmSize} ha` : ""}
         </h3>
-        <Button size="sm" onClick={() => setOpen(true)}>
-          Add Crop
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline-primary"
+            size="sm"
+            onClick={() => setFarmModal(true)}
+          >
+            {farm ? "Edit Farm Details" : "Add Farm Details"}
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => setCropModal({ open: true, crop: null })}
+          >
+            Add Crop
+          </Button>
+        </div>
       </div>
+
+      {/* Farm details summary */}
+      {farm && (
+        <div className="mb-6 grid gap-3 rounded-2xl border border-border p-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted">Farm size</p>
+            <p className="mt-1 text-sm font-bold text-dark">{farm.farmSize ? `${farm.farmSize} ha` : "â€”"}</p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted">Location</p>
+            <p className="mt-1 text-sm font-bold text-dark">{farm.location || "â€”"}</p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted">GPS</p>
+            <p className="mt-1 text-sm font-bold text-dark">
+              {farm.gpsLat && farm.gpsLng ? `${farm.gpsLat.toFixed(5)}, ${farm.gpsLng.toFixed(5)}` : "â€”"}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted">Season</p>
+            <p className="mt-1 text-sm font-bold text-dark">{farm.currentSeason || "â€”"}</p>
+          </div>
+          {farm.notes && (
+            <p className="text-sm text-muted sm:col-span-2 lg:col-span-4">{farm.notes}</p>
+          )}
+        </div>
+      )}
+
       {crops.length === 0 ? (
-        <p className="py-6 text-center text-sm text-muted">
-          No crops recorded yet
-        </p>
+        <p className="py-6 text-center text-sm text-muted">No crops recorded yet</p>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {crops.map((crop) => (
-            <div
-              key={crop._id}
-              className="rounded-2xl border border-border p-4"
-            >
-              <div className="flex items-center justify-between">
-                <h4 className="font-semibold text-dark">{crop.cropName}</h4>
-                <span className="capitalize text-xs text-muted">
-                  {crop.status}
-                </span>
+            <div key={crop._id} className="rounded-2xl border border-border p-4">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className={`rounded-lg border px-2 py-0.5 text-xs font-semibold capitalize ${CROP_STATUS_STYLES[crop.status] || "bg-subtle text-muted"}`}>
+                    {crop.status}
+                  </span>
+                  <h4 className="font-semibold text-dark">{crop.cropName}</h4>
+                </div>
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => setCropModal({ open: true, crop })}
+                    className="rounded-lg p-1.5 text-muted transition-colors hover:bg-primary-50 hover:text-primary"
+                    title="Edit crop"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => setDeleteTarget(crop)}
+                    className="rounded-lg p-1.5 text-muted transition-colors hover:bg-danger-50 hover:text-danger"
+                    title="Delete crop"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
-              {crop.variety && (
-                <p className="text-sm text-muted">{crop.variety}</p>
-              )}
+              {crop.variety && <p className="text-sm text-muted">{crop.variety}</p>}
               <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
-                <p className="text-muted">
-                  Area:{" "}
-                  <span className="font-semibold text-dark">
-                    {crop.areaHectares || "—"} ha
-                  </span>
-                </p>
-                <p className="text-muted">
-                  Season:{" "}
-                  <span className="font-semibold text-dark">
-                    {crop.season || "—"}
-                  </span>
-                </p>
-                <p className="text-muted">
-                  Est. Yield:{" "}
-                  <span className="font-semibold text-dark">
-                    {crop.estimatedYield || "—"}
-                  </span>
-                </p>
-                <p className="text-muted">
-                  Actual:{" "}
-                  <span className="font-semibold text-dark">
-                    {crop.actualYield || "—"}
-                  </span>
-                </p>
+                <p className="text-muted">Area: <span className="font-semibold text-dark">{crop.areaHectares || "â€”"} ha</span></p>
+                <p className="text-muted">Season: <span className="font-semibold text-dark">{crop.season || "â€”"}</span></p>
+                <p className="text-muted">Planted: <span className="font-semibold text-dark">{formatDate(crop.plantingDate)}</span></p>
+                <p className="text-muted">Harvest: <span className="font-semibold text-dark">{formatDate(crop.expectedHarvestDate)}</span></p>
+                <p className="text-muted">Est. Yield: <span className="font-semibold text-dark">{crop.estimatedYield ?? "â€”"}</span></p>
+                <p className="text-muted">Actual: <span className="font-semibold text-dark">{crop.actualYield ?? "â€”"}</span></p>
               </div>
+              {crop.notes && <p className="mt-2 border-t border-border-light pt-2 text-xs text-muted">{crop.notes}</p>}
             </div>
           ))}
         </div>
       )}
-      <AddCropModal
-        open={open}
-        onClose={() => setOpen(false)}
+
+      <CropFormModal
+        key={cropModal.open ? (cropModal.crop?._id || "new") : "closed"}
+        open={cropModal.open}
+        crop={cropModal.crop}
         memberId={member._id}
-        onRefresh={onRefresh}
+        onClose={() => setCropModal({ open: false, crop: null })}
+        onSaved={onRefresh}
+      />
+      <FarmDetailsModal
+        open={farmModal}
+        farm={farm}
+        memberId={member._id}
+        onClose={() => setFarmModal(false)}
+        onSaved={onRefresh}
+      />
+      <DeleteCropModal
+        crop={deleteTarget}
+        memberId={member._id}
+        onClose={() => setDeleteTarget(null)}
+        onDeleted={onRefresh}
       />
     </div>
-  );
+  )
 }
 
-function AddCropModal({ open, onClose, memberId, onRefresh }) {
+function CropFormModal({ open, crop, memberId, onClose, onSaved }) {
   const [form, setForm] = useState({
     cropName: "",
     variety: "",
     areaHectares: "",
+    plantingDate: "",
     season: "",
+    expectedHarvestDate: "",
+    status: "planted",
     estimatedYield: "",
-  });
-  const [saving, setSaving] = useState(false);
+    actualYield: "",
+    notes: "",
+  })
+
+  useEffect(() => {
+    if (open) {
+      setForm(
+        crop
+          ? {
+              cropName: crop.cropName || "",
+              variety: crop.variety || "",
+              areaHectares: crop.areaHectares || "",
+              plantingDate: formatDateToInput(crop.plantingDate),
+              season: crop.season || "",
+              expectedHarvestDate: formatDateToInput(crop.expectedHarvestDate),
+              status: crop.status || "planted",
+              estimatedYield: crop.estimatedYield || "",
+              actualYield: crop.actualYield || "",
+              notes: crop.notes || "",
+            }
+          : {
+              cropName: "",
+              variety: "",
+              areaHectares: "",
+              plantingDate: "",
+              season: "",
+              expectedHarvestDate: "",
+              status: "planted",
+              estimatedYield: "",
+              actualYield: "",
+              notes: "",
+            },
+      )
+    }
+  }, [open, crop])
 
   const submit = async () => {
-    if (!form.cropName) return;
-    setSaving(true);
-    try {
-      await api.post(`/farms/member/${memberId}/crops`, form);
-      toast.success("Crop added");
-      onClose();
-      if (onRefresh) onRefresh();
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to add crop");
-    } finally {
-      setSaving(false);
+    if (!form.cropName) {
+      toast.error("Select a crop")
+      return
     }
-  };
+    const payload = {
+      ...form,
+      areaHectares: form.areaHectares ? Number(form.areaHectares) : undefined,
+      estimatedYield: form.estimatedYield ? Number(form.estimatedYield) : undefined,
+      actualYield: form.actualYield ? Number(form.actualYield) : undefined,
+    }
+    try {
+      if (crop) {
+        await api.put(`/farms/member/${memberId}/crops/${crop._id}`, payload)
+        toast.success("Crop updated")
+      } else {
+        await api.post(`/farms/member/${memberId}/crops`, payload)
+        toast.success("Crop added")
+      }
+      onClose()
+      if (onSaved) onSaved()
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to save crop")
+    }
+  }
 
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title="Add Crop"
+      title={crop ? `Edit ${crop.cropName}` : "Add Crop"}
       footer={
         <>
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button loading={saving} onClick={submit}>
-            Add Crop
-          </Button>
+          <Button onClick={submit}>{crop ? "Save Changes" : "Add Crop"}</Button>
         </>
       }
     >
@@ -417,33 +540,267 @@ function AddCropModal({ open, onClose, memberId, onRefresh }) {
         <Input
           label="Area (ha)"
           type="number"
+          min="0"
+          step="0.01"
           value={form.areaHectares}
-          onChange={(e) =>
-            setForm((f) => ({ ...f, areaHectares: e.target.value }))
-          }
+          onChange={(e) => setForm((f) => ({ ...f, areaHectares: e.target.value }))}
+        />
+        <Input
+          label="Planting date"
+          type="date"
+          value={form.plantingDate}
+          onChange={(e) => setForm((f) => ({ ...f, plantingDate: e.target.value }))}
+        />
+        <Input
+          label="Expected harvest date"
+          type="date"
+          value={form.expectedHarvestDate}
+          onChange={(e) => setForm((f) => ({ ...f, expectedHarvestDate: e.target.value }))}
+        />
+        <Select
+          label="Status"
+          options={CROP_STATUSES}
+          value={form.status}
+          onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
         />
         <Input
           label="Season"
+          placeholder="e.g. 2026A, Major"
           value={form.season}
           onChange={(e) => setForm((f) => ({ ...f, season: e.target.value }))}
         />
         <Input
-          label="Estimated Yield"
+          label="Estimated yield"
           type="number"
+          min="0"
           value={form.estimatedYield}
-          onChange={(e) =>
-            setForm((f) => ({ ...f, estimatedYield: e.target.value }))
-          }
+          onChange={(e) => setForm((f) => ({ ...f, estimatedYield: e.target.value }))}
         />
+        <Input
+          label="Actual yield"
+          type="number"
+          min="0"
+          value={form.actualYield}
+          onChange={(e) => setForm((f) => ({ ...f, actualYield: e.target.value }))}
+        />
+        <div className="sm:col-span-2">
+          <Input
+            label="Notes"
+            value={form.notes}
+            onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+          />
+        </div>
       </div>
     </Modal>
-  );
+  )
 }
 
-function CollectionsTab({ collections }) {
+function FarmDetailsModal({ open, farm, memberId, onClose, onSaved }) {
+  const [form, setForm] = useState({
+    farmSize: "",
+    location: "",
+    gpsLat: "",
+    gpsLng: "",
+    currentSeason: "",
+    notes: "",
+  })
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (open) {
+      setForm({
+        farmSize: farm?.farmSize || "",
+        location: farm?.location || "",
+        gpsLat: farm?.gpsLat || "",
+        gpsLng: farm?.gpsLng || "",
+        currentSeason: farm?.currentSeason || "",
+        notes: farm?.notes || "",
+      })
+    }
+  }, [open, farm])
+
+  const submit = async () => {
+    setSaving(true)
+    const payload = {
+      ...form,
+      farmSize: form.farmSize ? Number(form.farmSize) : undefined,
+      gpsLat: form.gpsLat ? Number(form.gpsLat) : undefined,
+      gpsLng: form.gpsLng ? Number(form.gpsLng) : undefined,
+    }
+    try {
+      if (farm) {
+        await api.put(`/farms/${farm._id}`, payload)
+        toast.success("Farm details updated")
+      } else {
+        await api.post(`/farms/member/${memberId}`, payload)
+        toast.success("Farm profile created")
+      }
+      onClose()
+      if (onSaved) onSaved()
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to save farm details")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={farm ? "Edit Farm Details" : "Add Farm Details"}
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button loading={saving} onClick={submit}>
+            Save
+          </Button>
+        </>
+      }
+    >
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Input
+          label="Farm size (ha)"
+          type="number"
+          min="0"
+          step="0.01"
+          value={form.farmSize}
+          onChange={(e) => setForm((f) => ({ ...f, farmSize: e.target.value }))}
+          hint="Total farm area in hectares"
+        />
+        <Input
+          label="Location"
+          value={form.location}
+          placeholder="Village / town"
+          onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
+        />
+        <Input
+          label="GPS latitude"
+          type="number"
+          step="any"
+          value={form.gpsLat}
+          onChange={(e) => setForm((f) => ({ ...f, gpsLat: e.target.value }))}
+          placeholder="e.g. 6.6938"
+        />
+        <Input
+          label="GPS longitude"
+          type="number"
+          step="any"
+          value={form.gpsLng}
+          onChange={(e) => setForm((f) => ({ ...f, gpsLng: e.target.value }))}
+          placeholder="e.g. -1.6309"
+        />
+        <Input
+          label="Current season"
+          value={form.currentSeason}
+          placeholder="e.g. 2026A"
+          onChange={(e) => setForm((f) => ({ ...f, currentSeason: e.target.value }))}
+        />
+        <div className="sm:col-span-2">
+          <Input
+            label="Notes"
+            value={form.notes}
+            onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+          />
+        </div>
+      </div>
+    </Modal>
+  )
+}
+
+function DeleteCropModal({ crop, memberId, onClose, onDeleted }) {
+  const [saving, setSaving] = useState(false)
+
+  const submit = async () => {
+    setSaving(true)
+    try {
+      await api.delete(`/farms/member/${memberId}/crops/${crop._id}`)
+      toast.success("Crop removed")
+      onClose()
+      if (onDeleted) onDeleted()
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to remove crop")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Modal
+      open={!!crop}
+      onClose={onClose}
+      title="Delete Crop"
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="danger" loading={saving} onClick={submit}>
+            <Trash2 className="h-4 w-4" /> Delete
+          </Button>
+        </>
+      }
+    >
+      <p className="text-sm text-muted">
+        Remove <span className="font-semibold text-dark">{crop?.cropName}</span> from this farm? This does not affect collection history.
+      </p>
+    </Modal>
+  )
+}
+
+function CollectionsTab({ member, collections, onRefresh }) {
+  const [settleOpen, setSettleOpen] = useState(false)
+  const [settling, setSettling] = useState(false)
+  const [settleForm, setSettleForm] = useState({ method: "cash", paymentDate: formatDateToInput(new Date()) })
+  const [checked, setChecked] = useState({})
+
+  const selectedCollectionIds = Object.keys(checked || {}).filter((id) => checked[id])
+  const selected = collections.filter((c) => selectedCollectionIds.includes(c._id))
+  const settleTotal = selected.reduce((s, c) => s + (c.totalValue || 0), 0)
+
+  const toggleAll = () => {
+    const allOn = selectedCollectionIds.length === collections.length
+    setChecked(
+      Object.fromEntries(collections.map((c) => [c._id, !allOn])),
+    )
+  }
+
+  const submitSettle = async () => {
+    if (!selectedCollectionIds.length) {
+      toast.error("Select at least one collection")
+      return
+    }
+    setSettling(true)
+    try {
+      await api.post("/payments/produce", {
+        memberId: member._id,
+        collectionIds: selectedCollectionIds,
+        method: settleForm.method,
+        paymentDate: settleForm.paymentDate || new Date(),
+      })
+      toast.success("Produce payment recorded")
+      setSettleOpen(false)
+      setChecked({})
+      if (onRefresh) onRefresh()
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to settle collections")
+    } finally {
+      setSettling(false)
+    }
+  }
+
   return (
     <div>
-      <h3 className="mb-4 text-base font-bold text-dark">Collection History</h3>
+      <div className="mb-4 flex items-center justify-between">
+        <h3 className="text-base font-bold text-dark">Collection History</h3>
+        {collections.length > 0 && (
+          <Button size="sm" onClick={() => setSettleOpen(true)}>
+            Settle Produce
+          </Button>
+        )}
+      </div>
       {collections.length === 0 ? (
         <p className="py-6 text-center text-sm text-muted">
           No collections recorded
@@ -484,6 +841,90 @@ function CollectionsTab({ collections }) {
           </table>
         </div>
       )}
+
+      <Modal
+        open={settleOpen}
+        onClose={() => setSettleOpen(false)}
+        title="Settle Produce Collections"
+        size="lg"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setSettleOpen(false)}>
+              Cancel
+            </Button>
+            <Button loading={settling} onClick={submitSettle}>
+              Record Produce Payment ({formatCurrency(settleTotal)})
+            </Button>
+          </>
+        }
+      >
+        <div className="mb-4 flex items-center gap-3">
+          <button
+            onClick={toggleAll}
+            className={`flex h-5 w-5 items-center justify-center rounded-md border ${selectedCollectionIds.length === collections.length ? "border-primary bg-primary" : "border-border bg-surface"}`}
+          >
+            {selectedCollectionIds.length === collections.length && <span className="text-[10px] font-bold text-white">✓</span>}
+          </button>
+          <span className="text-sm font-semibold text-dark">Select all ({collections.length})</span>
+        </div>
+        <div className="max-h-72 space-y-2 overflow-y-auto">
+          {collections.map((c) => {
+            const isOn = !!checked[c._id]
+            return (
+              <label
+                key={c._id}
+                className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition-colors ${isOn ? "border-primary bg-primary-50" : "border-border hover:bg-subtle/50"}`}
+              >
+                <input
+                  type="checkbox"
+                  checked={isOn}
+                  onChange={() => setChecked((x) => ({ ...x, [c._id]: !isOn }))}
+                  className="h-4 w-4 accent-primary"
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-dark">{c.crop}</p>
+                  <p className="text-xs text-muted">
+                    {formatDate(c.date)} · {c.quantity} {c.unit} · Grade {c.qualityGrade}
+                  </p>
+                </div>
+                <span className="text-sm font-bold text-dark">{formatCurrency(c.totalValue)}</span>
+              </label>
+            )
+          })}
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <Select
+            label="Payout method"
+            options={[
+              { value: "cash", label: "Cash" },
+              { value: "mobile_money", label: "Mobile Money (Hubtel)" },
+              { value: "bank_transfer", label: "Bank Transfer" },
+              { value: "cheque", label: "Cheque" },
+              { value: "other", label: "Other" },
+            ]}
+            value={settleForm.method}
+            onChange={(e) => setSettleForm((f) => ({ ...f, method: e.target.value }))}
+          />
+          <Input
+            label="Payment date"
+            type="date"
+            value={settleForm.paymentDate}
+            onChange={(e) => setSettleForm((f) => ({ ...f, paymentDate: e.target.value }))}
+          />
+        </div>
+        {settleForm.method === "mobile_money" && (
+          <div className="mt-3 rounded-xl bg-primary-50 px-4 py-3 text-xs text-primary">
+            <span className="font-semibold">Hubtel send: </span>
+            payout lands in the member's wallet
+            {member.phone ? (
+              <> via <span className="font-bold">{member.phone}</span></>
+            ) : (
+              <span className="font-semibold text-danger"> — this member has no phone number on file.</span>
+            )}
+            . In demo mode (no Hubtel credentials) the transaction is simulated.
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
@@ -536,10 +977,17 @@ function PaymentsTab({ payments }) {
   );
 }
 
-function LoansTab({ loans }) {
+function LoansTab({ member, loans, onRefresh }) {
+  const [requestOpen, setRequestOpen] = useState(false)
+
   return (
     <div>
-      <h3 className="mb-4 text-base font-bold text-dark">Loans</h3>
+      <div className="mb-4 flex items-center justify-between">
+        <h3 className="text-base font-bold text-dark">Loans</h3>
+        <Button size="sm" onClick={() => setRequestOpen(true)}>
+          Request Loan
+        </Button>
+      </div>
       {loans.length === 0 ? (
         <p className="py-6 text-center text-sm text-muted">No loans</p>
       ) : (
@@ -552,6 +1000,7 @@ function LoansTab({ loans }) {
                 </h4>
                 <Badge status={l.status} />
               </div>
+              {l.purpose && <p className="mt-0.5 text-xs text-muted">{l.purpose}</p>}
               <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
                 <p className="text-muted">
                   Amount:{" "}
@@ -571,11 +1020,42 @@ function LoansTab({ loans }) {
                     {formatDate(l.dueDate)}
                   </span>
                 </p>
+                <p className="text-muted">
+                  Repayments:{" "}
+                  <span className="font-semibold text-dark">
+                    {(l.repaymentSchedule || []).length}
+                  </span>
+                </p>
               </div>
+              {l.repaymentSchedule?.length > 0 && (
+                <ul className="mt-3 space-y-1 border-t border-border-light pt-2 text-xs text-muted">
+                  {l.repaymentSchedule.slice(0, 3).map((r, i) => (
+                    <li key={i} className="flex justify-between">
+                      <span className="capitalize">{r.method.replace(/_/g, " ")} · {formatDate(r.date)}</span>
+                      <span className="font-semibold text-dark">{formatCurrency(r.amount)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <Link
+                to={`/loans/${l._id}`}
+                className="mt-3 inline-flex text-xs font-semibold text-primary hover:text-primary-hover"
+              >
+                View full schedule →
+              </Link>
             </div>
           ))}
         </div>
       )}
+      <LoanRequestModal
+        open={requestOpen}
+        member={member}
+        onClose={() => setRequestOpen(false)}
+        onSaved={() => {
+          setRequestOpen(false)
+          if (onRefresh) onRefresh()
+        }}
+      />
     </div>
   );
 }
@@ -652,132 +1132,3 @@ function DocumentsTab({ member, onRefresh }) {
   );
 }
 
-function CollectionModal({ open, onClose, memberId, onSaved }) {
-  const [form, setForm] = useState({
-    crop: "",
-    quantity: "",
-    unit: "kg",
-    qualityGrade: "A",
-    pricePerUnit: "",
-    collectionLocation: "",
-    notes: "",
-  });
-  const [photo, setPhoto] = useState(null);
-  const [saving, setSaving] = useState(false);
-
-  const totalValue =
-    (Number(form.quantity) || 0) * (Number(form.pricePerUnit) || 0);
-
-  const submit = async () => {
-    if (!form.crop || !form.quantity) return;
-    setSaving(true);
-    try {
-      const fd = new FormData();
-      Object.entries(form).forEach(([k, v]) => v && fd.append(k, v));
-      fd.append("memberId", memberId);
-      if (photo) fd.append("photo", photo);
-      await api.post("/collections", fd, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      toast.success("Collection recorded");
-      onSaved();
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to record collection");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="Record Collection"
-      footer={
-        <>
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button loading={saving} onClick={submit}>
-            Save Collection
-          </Button>
-        </>
-      }
-    >
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Select
-          label="Crop *"
-          options={CROPS.map((c) => ({ value: c, label: c }))}
-          value={form.crop}
-          onChange={(e) => setForm((f) => ({ ...f, crop: e.target.value }))}
-        />
-        <div className="grid grid-cols-2 gap-2">
-          <Input
-            label="Quantity *"
-            type="number"
-            value={form.quantity}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, quantity: e.target.value }))
-            }
-          />
-          <Select
-            label="Unit"
-            options={["kg", "lb", "bag", "tonne"]}
-            value={form.unit}
-            onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))}
-          />
-        </div>
-        <Select
-          label="Grade"
-          options={QUALITY_GRADES}
-          value={form.qualityGrade}
-          onChange={(e) =>
-            setForm((f) => ({ ...f, qualityGrade: e.target.value }))
-          }
-        />
-        <Input
-          label="Price per unit"
-          type="number"
-          step="any"
-          value={form.pricePerUnit}
-          onChange={(e) =>
-            setForm((f) => ({ ...f, pricePerUnit: e.target.value }))
-          }
-        />
-        <Input
-          label="Collection Location"
-          value={form.collectionLocation}
-          onChange={(e) =>
-            setForm((f) => ({ ...f, collectionLocation: e.target.value }))
-          }
-        />
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-dark">
-            Photo
-          </label>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => setPhoto(e.target.files[0])}
-            className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm text-dark outline-none transition-all duration-150 focus:border-primary focus:ring-2 focus:ring-primary-100"
-          />
-        </div>
-        <div className="sm:col-span-2">
-          <Input
-            label="Notes"
-            value={form.notes}
-            onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-          />
-        </div>
-        <div className="sm:col-span-2 flex justify-between rounded-xl bg-primary-50 px-4 py-3">
-          <span className="text-sm font-semibold text-primary">
-            Total Value
-          </span>
-          <span className="text-sm font-bold text-primary">
-            {formatCurrency(totalValue)}
-          </span>
-        </div>
-      </div>
-    </Modal>
-  );
-}
