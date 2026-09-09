@@ -13,9 +13,5 @@
   },
   "devDependencies": {
     "concurrently": "^10.0.5"
-  },
-  "dependencies": {
-    "framer-motion": "^13.2.0",
-    "mongoose": "^8.12.1"
   }
 }
