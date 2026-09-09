@@ -216,8 +216,8 @@ function Hero({ scrollTo }) {
           style={{ y: yBg }}
           className="h-[115%] w-full object-cover"
         />
-        <div className="absolute inset-0 bg-background/55" />
-        <div className="absolute inset-0 bg-linear-to-b from-background via-background/75 to-background" />
+        <div className="absolute inset-0 bg-background/45" />
+ <div className="absolute inset-0 bg-linear-to-t from-background/10 via-background/10 to-background" />
         <div className="absolute -left-40 top-1/4 h-112 w-md rounded-full bg-primary-200/30 blur-3xl" />
         <div className="absolute -right-32 bottom-0 h-96 w-96 rounded-full bg-primary-400/15 blur-3xl" />
       </div>
@@ -254,7 +254,7 @@ function Hero({ scrollTo }) {
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.9, duration: 0.8, ease: EASE }}
-              className="mt-8 max-w-xl text-lg leading-relaxed text-muted"
+              className="mt-8 max-w-xl text-lg leading-relaxed text-black"
             >
               The one platform that brings your members, harvests, payments and compliance together — built around how Ghanian field teams actually work.
             </motion.p>
@@ -274,7 +274,7 @@ function Hero({ scrollTo }) {
               </a>
               <button
                 onClick={() => scrollTo('platform')}
-                className="group inline-flex items-center gap-2.5 rounded-full border border-border bg-white/60 px-8 py-4 text-sm font-semibold text-muted backdrop-blur transition-all hover:border-primary/50 hover:text-primary"
+                className="group inline-flex items-center gap-2.5 rounded-full border border-border bg-white px-8 py-4 text-sm font-bold text-black backdrop-blur transition-all hover:border-primary/50 hover:text-primary"
               >
                 See the platform
                 <IoChevronDown className="h-4 w-4 transition-transform group-hover:translate-y-0.5" />
@@ -345,7 +345,7 @@ function Impact() {
 
   return (
     <section id="payments" className="scroll-mt-24 bg-background py-24 sm:py-32">
-      <div ref={ref} className="mx-auto grid max-w-[1400px] gap-14 px-5 sm:px-8 lg:grid-cols-12">
+      <div ref={ref} className="mx-auto grid max-w-350 gap-14 px-5 sm:px-8 lg:grid-cols-12">
         <div className="lg:col-span-4">
           <Reveal>
             <Kicker>By the numbers</Kicker>
@@ -540,7 +540,7 @@ function Features() {
                   show: { opacity: 1, y: 0, transition: { duration: 0.7, ease: EASE } },
                 }}
                 whileHover={{ y: -6, transition: { type: 'spring', stiffness: 320, damping: 22 } }}
-                className="group relative flex cursor-default flex-col overflow-hidden rounded-[2rem] border border-border bg-surface p-6 shadow-card transition-colors duration-300 hover:border-primary/40 hover:shadow-xl hover:shadow-primary/10 sm:p-7"
+                className="group relative flex cursor-default flex-col overflow-hidden rounded-4xl border border-border bg-surface p-6 shadow-card transition-colors duration-300 hover:border-primary/40 hover:shadow-xl hover:shadow-primary/10 sm:p-7"
               >
                 <span
                   aria-hidden
@@ -789,7 +789,7 @@ function Testimonials() {
               show: { opacity: 1, y: 0, transition: { duration: 0.8, ease: EASE } },
             }}
             whileHover={{ y: -5, transition: { type: 'spring', stiffness: 300, damping: 20 } }}
-            className="group relative flex flex-col overflow-hidden rounded-[2rem] border border-border bg-surface p-7 shadow-card transition-colors duration-300 hover:border-primary/40 hover:shadow-xl hover:shadow-primary/10 sm:p-9 lg:col-span-6"
+            className="group relative flex flex-col overflow-hidden rounded-4xl border border-border bg-surface p-7 shadow-card transition-colors duration-300 hover:border-primary/40 hover:shadow-xl hover:shadow-primary/10 sm:p-9 lg:col-span-6"
           >
             <span aria-hidden className="absolute -top-6 right-4 font-inter text-[8rem] leading-none text-primary/10 select-none">
               "
@@ -825,7 +825,7 @@ function Testimonials() {
                 show: { opacity: 1, y: 0, transition: { duration: 0.7, ease: EASE } },
               }}
               whileHover={{ y: -5, transition: { type: 'spring', stiffness: 300, damping: 20 } }}
-              className="group relative flex flex-col overflow-hidden rounded-[2rem] border border-border bg-surface p-7 shadow-card transition-colors duration-300 hover:border-primary/40 hover:shadow-xl hover:shadow-primary/10 lg:col-span-3"
+              className="group relative flex flex-col overflow-hidden rounded-4xl border border-border bg-surface p-7 shadow-card transition-colors duration-300 hover:border-primary/40 hover:shadow-xl hover:shadow-primary/10 lg:col-span-3"
             >
               <span aria-hidden className="absolute top-3 right-5 font-inter text-5xl leading-none text-primary/10 select-none">
                 "
