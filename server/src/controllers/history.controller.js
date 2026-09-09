@@ -31,7 +31,7 @@ export const getMemberHistory = async (req, res, next) => {
         .populate("processedBy", "name")
         .lean(),
       Loan.find({ memberId: member._id })
-        .select("type amount balance status dueDate createdAt purpose repaymentSchedule")
+        .select("type amount amountRepaid balance status dueDate createdAt purpose repaymentSchedule")
         .lean(),
       FieldVisit.find({ memberId: member._id })
         .select("date notes gpsLat gpsLng officerId")
