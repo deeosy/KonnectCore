@@ -229,7 +229,6 @@ export default function LoanRequestModal({ open, onClose, onSaved, member }) {
           <span className="text-sm font-bold text-primary">{formatCurrency(totalRepayable)}</span>
         </div>
         <div className="sm:col-span-2 flex items-start gap-2 rounded-xl bg-subtle px-4 py-3 text-xs text-muted">
-          <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
           <span>
             A credit score is calculated at request time: up to 60 pts for cumulative produce delivered, up to
             20 pts for completed loans, minus 15 pts per overdue loan.
