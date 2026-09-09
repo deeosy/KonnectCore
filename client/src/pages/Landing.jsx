@@ -140,7 +140,7 @@ function Navbar({ scrollTo }) {
             <button
               key={id}
               onClick={() => go(label)}
-              className={`group relative font-mono text-xs uppercase tracking-[0.18em] transition-colors ${
+              className={`group relative font-mono text-sm uppercase tracking-[0.18em] transition-colors ${
                 active === id ? 'text-primary' : 'text-muted hover:text-dark'
               }`}
             >
