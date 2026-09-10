@@ -6,11 +6,12 @@ import api from '../services/api'
 import PageHeader from '../components/ui/PageHeader'
 import StatCard from '../components/ui/StatCard'
 import Button from '../components/ui/Button'
-import Modal from '../components/ui/Modal'
+import Drawer from '../components/ui/Drawer'
 import Input from '../components/ui/Input'
 import Select from '../components/ui/Select'
 import EmptyState from '../components/ui/EmptyState'
 import { formatCurrency, formatDate } from '../utils/format'
+import { positive, requiredDate } from '../utils/validate'
 
 const EXPENSE_CATEGORIES = [
   { value: 'fuel', label: 'Fuel' },
@@ -172,7 +173,7 @@ export default function ExpensesPage() {
         )}
       </div>
 
-      <ExpenseModal
+      <ExpenseDrawer
         open={modalOpen}
         expense={editTarget}
         onClose={() => setModalOpen(false)}
@@ -182,9 +183,10 @@ export default function ExpensesPage() {
   )
 }
 
-function ExpenseModal({ open, expense, onClose, onSaved }) {
+function ExpenseDrawer({ open, expense, onClose, onSaved }) {
   const [form, setForm] = useState({ category: 'fuel', amount: '', description: '', date: dateInputValue(new Date()), receipt: '' })
   const [saving, setSaving] = useState(false)
+  const [errors, setErrors] = useState({})
 
   useEffect(() => {
     if (!open) return
@@ -199,13 +201,21 @@ function ExpenseModal({ open, expense, onClose, onSaved }) {
           }
         : { category: 'fuel', amount: '', description: '', date: dateInputValue(new Date()), receipt: '' },
     )
+    setErrors({})
   }, [open, expense])
 
+  const setField = (key, value) => {
+    setForm((f) => ({ ...f, [key]: value }))
+    setErrors((e) => (e[key] ? { ...e, [key]: '' } : e))
+  }
+
   const submit = async () => {
-    if (!form.amount) {
-      toast.error('Enter an amount')
-      return
+    const nextErrors = {
+      amount: positive(form.amount, 'Amount'),
+      date: requiredDate(form.date),
     }
+    setErrors(nextErrors)
+    if (Object.values(nextErrors).some((v) => v)) return
     setSaving(true)
     const payload = {
       category: form.category,
@@ -232,23 +242,13 @@ function ExpenseModal({ open, expense, onClose, onSaved }) {
   }
 
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title={expense ? 'Edit Expense' : 'Add Expense'}
-      footer={
-        <>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button loading={saving} onClick={submit}>{expense ? 'Save Changes' : 'Record Expense'}</Button>
-        </>
-      }
-    >
-      <div className="grid gap-4 sm:grid-cols-2">
+    <Drawer open={open} onClose={onClose} title={expense ? 'Edit Expense' : 'Add Expense'}>
+      <div className="grid gap-4 sm:grid-cols-1">
         <Select
           label="Category *"
           options={EXPENSE_CATEGORIES}
           value={form.category}
-          onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+          onChange={(e) => setField('category', e.target.value)}
         />
         <Input
           label="Amount (GHS) *"
@@ -256,27 +256,31 @@ function ExpenseModal({ open, expense, onClose, onSaved }) {
           min="0"
           step="any"
           value={form.amount}
-          onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
+          error={errors.amount}
+          onChange={(e) => setField('amount', e.target.value)}
         />
         <Input
           label="Date *"
           type="date"
           value={form.date}
-          onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
+          error={errors.date}
+          onChange={(e) => setField('date', e.target.value)}
         />
         <Input
           label="Receipt / reference"
           value={form.receipt}
-          onChange={(e) => setForm((f) => ({ ...f, receipt: e.target.value }))}
+          onChange={(e) => setField('receipt', e.target.value)}
         />
-        <div className="sm:col-span-2">
-          <Input
-            label="Description"
-            value={form.description}
-            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-          />
-        </div>
+        <Input
+          label="Description"
+          value={form.description}
+          onChange={(e) => setField('description', e.target.value)}
+        />
       </div>
-    </Modal>
+      <div className="mt-6 flex justify-end gap-3 border-t border-border-light pt-4">
+        <Button variant="outline" onClick={onClose}>Cancel</Button>
+        <Button loading={saving} onClick={submit}>{expense ? 'Save Changes' : 'Record Expense'}</Button>
+      </div>
+    </Drawer>
   )
 }

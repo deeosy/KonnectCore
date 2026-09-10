@@ -14,7 +14,6 @@ import {
   UserMinus,
   Search,
   Layers,
-  UserCog,
   Landmark,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -56,8 +55,6 @@ const TYPE_META = {
   group: { icon: Users, chip: 'bg-success-50 text-success-700', dot: 'bg-success' },
   community: { icon: Home, chip: 'bg-warning-50 text-warning-700', dot: 'bg-warning-500' },
 }
-
-const labelOf = (type) => (type ? type.charAt(0).toUpperCase() + type.slice(1) : '')
 
 export default function GroupsPage() {
   const [tree, setTree] = useState([])
@@ -393,16 +390,18 @@ function GroupForm({ defaults, groups, leaders, onSaved, onClose, editing }) {
     description: editing?.description || defaults?.description || '',
   }))
   const [saving, setSaving] = useState(false)
+  const [nameError, setNameError] = useState('')
 
   const set = (key) => (e) => setForm((f) => {
     const next = { ...f, [key]: e.target.value }
+    if (key === 'name') setNameError('')
     if (key === 'type') next.parentId = ''
     return next
   })
 
   const submit = async () => {
     if (!form.name.trim()) {
-      toast.error('Name is required')
+      setNameError('Name is required')
       return
     }
     setSaving(true)
@@ -424,7 +423,7 @@ function GroupForm({ defaults, groups, leaders, onSaved, onClose, editing }) {
 
   return (
     <div className="grid gap-4 sm:grid-cols-2">
-      <Input label="Name *" value={form.name} onChange={set('name')} placeholder="e.g. Ashanti Region" />
+      <Input label="Name *" value={form.name} onChange={set('name')} error={nameError} placeholder="e.g. Ashanti Region" />
       <Select label="Type" options={GROUP_TYPES} value={form.type} onChange={set('type')} />
       <Select
         label="Parent"

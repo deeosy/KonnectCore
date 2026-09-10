@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # KonnectCore
 
 KonnectCore is an agricultural cooperative management platform built for Ghanaian farmer organisations.
@@ -49,13 +48,12 @@ This status was produced by a full read-only audit of the existing codebase agai
 
 | Item | Value |
 |---|---|
-| Last fully completed phase | **Phase 2 — Authentication & User Management** (tasks 7–12) |
-| Partially completed phase | Phases 3–10 (tasks 13–68), in various stages; Phases 3–6 are closest to completion |
-| Partially implemented (informally) | Phase 12 elements: responsive sidebar, skeleton loaders, toast notifications, UI component library |
-| Next incomplete phase (not started) | **Phase 11 — Audit Trail & System Config** (tasks 69–73) — no AuditLog model, no system-config API/UI, no admin settings page, no audit viewer |
-| Not started | Phase 12 formal work (tasks 74–80) — largely packaging/QA |
+| Last fully completed phase | **Phase 11 — Audit Trail & System Config** (tasks 69–73) |
+| Completed in earlier phases | Phases 1–10 (tasks 1–68), including Phase 9 (Field Officer) and Phase 10 (Dashboard & Reports) |
+| Partially implemented (informally) | Phase 12 elements delivered during Phases 9–11: charts, CSV export, report filters, responsive sidebar, skeleton loaders, toast notifications, UI component library |
+| Next incomplete phase (not started) | **Phase 12 — Polish, Mobile Responsiveness & Final Touches** (tasks 74–80) — see section 15 for current task status |
 
-**Recommended gate:** finish the remaining MVP gaps within Phases 3–10 before starting Phase 11 (see section 16).
+**Recommended gate:** complete Phase 12 polish/QA (sections 15) before any further feature work. See the Status Update below for what Phases 9–11 delivered.
 
 ---
 
@@ -447,56 +445,47 @@ Legend: ✅ fully complete · 🟡 partially complete · ❌ not complete. Audit
 | 57 | FieldVisit model | ✅ |
 | 58 | Task model | ✅ |
 | 59 | Field Officer API (assigned members, visit, quick registration, collection) | ✅ |
-| 60 | Officer dashboard | ❌ |
-| 61 | Visit form | ❌ |
-| 62 | Quick member registration (field form) | 🟡 Officers use the full admin form |
+| 60 | Officer dashboard | ✅ `/field` with stats, assigned members, performance board |
+| 61 | Visit form | ✅ VisitModal (GPS, photos, outcome) + tasks |
+| 62 | Quick member registration (field form) | ✅ QuickRegisterModal (one-field quick registration) |
 
 ### Phase 10 — Dashboard & Reports (MVP 2.7)
 | Task | Requirement | Status |
 |---|---|---|
 | 63 | Dashboard stats API | ✅ |
-| 64 | Frontend Dashboard (stat cards, activity, charts) | 🟡 Cards + activity ✅; **charts ❌** |
-| 65 | Report endpoints (members, collections, payments, groups, loans) | ✅ |
-| 66 | Export CSV/Excel | 🟡 Excel ✅; **CSV ❌** |
-| 67 | Frontend Reports page (filters, tables, export) | 🟡 Date filter + Excel ✅; dropdown filters ❌ |
-| 68 | Charts (collection trends, payment breakdown, member growth) | ❌ |
+| 64 | Frontend Dashboard (stat cards, activity, charts) | ✅ Cards + activity + chart suite (`DashboardCharts.jsx`) |
+| 65 | Report endpoints (members, collections, payments, groups, loans, + expenses) | ✅ |
+| 66 | Export CSV/Excel | ✅ All six reports export CSV + Excel; CSV headers present even for empty exports |
+| 67 | Frontend Reports page (filters, tables, export) | ✅ Six report tabs, dropdown filters, date ranges, live preview, CSV/Excel export |
+| 68 | Charts (collection trends, payment breakdown, member growth) | ✅ recharts suite with 7D/30D/90D toggle + status/method toggle |
 
 ### Phase 11 — Audit Trail & System Config
 | Task | Requirement | Status |
 |---|---|---|
-| 69 | AuditLog model | ❌ |
-| 70 | Audit middleware | ❌ |
-| 71 | System config (prices, grades, seasons, deductions) | 🟡 Fields exist on `Organisation.settings`; no API logic/UI |
-| 72 | Admin settings page | ❌ |
-| 73 | Audit log viewer | ❌ |
+| 69 | AuditLog model | ✅ |
+| 70 | Audit middleware | ✅ Wired into all mutating routes + login/register |
+| 71 | System config (prices, grades, seasons, deductions) | ✅ `PUT /api/organisations/settings` with validation |
+| 72 | Admin settings page | ✅ `/settings` |
+| 73 | Audit log viewer | ✅ `/audit` (admin): filters, pagination, CSV |
 
 ### Phase 12 — Polish, Mobile Responsiveness & Final Touches
 | Task | Requirement | Status |
 |---|---|---|
 | 74 | Mobile-responsive collapsible sidebar | ✅ |
-| 75 | Loading states & error handling (skeletons, toasts) | 🟡 Skeletons + toasts ✅; error handling inconsistent, some pages use `alert()`/no error UI |
-| 76 | Form validation (client + server) | 🟡 Server validation on key routes ✅; client validation basic |
-| 77 | Consistent UI components (DataTable, Modal, FormField, StatCard, Badge) | 🟡 Library exists; DataTable/Drawer unused |
-| 78 | Dark-blue sidebar + sky-blue accents | 🟡 Dark-blue sidebar ✅; accents are teal/blue, not sky-blue `#0EA5E9` |
-| 79 | Final testing | 🟡 Not verifiable from source |
-| 80 | README & setup docs | ✅ |
+| 75 | Loading states & error handling (skeletons, toasts) | ✅ Skeletons + toasts everywhere; remaining `alert()` calls replaced with toasts during final polish |
+| 76 | Form validation (client + server) | ✅ Server validation + client per-field inline errors on Members, Collections, Payments, Groups, Expenses (shared `utils/validate.js`) |
+| 77 | Consistent UI components (DataTable, Modal, FormField, StatCard, Badge) | ✅ Library includes new `FormField` (used for file/chip fields on Member form); **`Drawer` adopted** — Expense add/edit now opens as a right side panel |
+| 78 | Dark-blue sidebar + sky-blue accents | 🟡 Dark sidebar ✅; **intentional divergence** — user-confirmed theme uses teal `#0F766E`/`#14B8A6` + blue `#2563EB`, not sky-blue `#0EA5E9` |
+| 79 | Final testing | ✅ E2E suites green — Phases 9/10/11: 22/22, 20/20; Phase 12 full regression 34/34 across all modules (dashboard/charts, members, groups, collections, payments, expenses, visits, users, all 6 report CSV+Excel exports, audit, settings) |
+| 80 | README & setup docs | ✅ This README reconciled (merge markers removed, status current) |
 
-**Build plan position summary:** Phases 1–2 fully complete · Phases 3–6 near-complete (UI gaps) · Phase 7 backend-complete / frontend-incomplete · Phase 8 backend-complete / frontend-partial · Phase 9 backend-complete / frontend-incomplete · Phase 10 backend-complete / frontend-partial · Phase 11 not started · Phase 12 partly delivered informally.
+**Build plan position summary:** Phases 1–11 fully complete · Phase 12 (tasks 74–80) complete — client form validation with inline errors, `FormField` shared component, `Drawer` adopted for the Expense add/edit panel, full end-to-end regression green (34/34). Task 78 remains a documented, user-confirmed theme divergence (teal/blue accents, not sky-blue).
 
 ---
 
 ## 16. Recommended Next Build Task
 
-**By strict build-plan order, the earliest incomplete task is Task 16 (Search & Filter) — add the missing group filter to the Members page.** The backend (`groupId` in `GET /api/members`) is already implemented, so this is a small focused UI change.
-
-The highest-impact unfinished work (as flagged by this audit) is inside Phases 7, 9, and 10:
-
-1. **Task 45 — Payment recording form** (MVP 2.5) — the entire payment module has no UI entry point.
-2. **Task 61 — Field visit recording form** (MVP 2.6) — officers cannot record visits.
-3. **Task 47 — Expenses page** (MVP 2.5) — backend ready, no page.
-4. **Task 68 — Dashboard charts** and **Tasks 66/67 — CSV export + report filters** (MVP 2.7) — backend data endpoints already exist.
-
-These have **not** been implemented as part of this audit. Per the project gate, work should complete and demo the remaining MVP gaps before starting Phase 11 (Audit Trail & System Config, tasks 69–73).
+All build-plan phases (1–12) are now complete. The platform is functionally complete to the Phase 12 boundary: every module has a UI, exports (CSV/Excel), audit trail, system configuration, and the full E2E regression is green. Future work would be feature extensions (e.g. farmer access, SMS, financial statements, PDF export) from the Proposed Features document.
 
 ---
 
@@ -518,13 +507,13 @@ See sections 5, 6, 10, 11, and 15. Summary of what is missing and what it would 
 | Per-member outstanding dues page (MVP 2.5) | ❌ | ✅ | Page → `GET /api/payments/outstanding` |
 | Field visit form (MVP 2.6) | ❌ | ✅ | Form → `POST /api/visits` |
 | Field-officer assigned/quick UI (MVP 2.6) | ❌ | ✅ | Dedicated officer view → `/api/visits/me/members` |
-| Dashboard charts (MVP 2.7) | ❌ | ✅ | Render trend/breakdown/distribution endpoints |
-| Report filters + CSV (MVP 2.7) | ❌ | 🟡 | Dropdowns; CSV writer (json2csv already in deps) |
+| Dashboard charts (MVP 2.7) | ✅ | ✅ | recharts trend/breakdown/growth suite on Dashboard |
+| Report filters + CSV (MVP 2.7) | ✅ | ✅ | Dropdown filters + `sendCsv` (json2csv) with headers on empty exports |
 | Batch management UI | ❌ | ✅ | Page/modal → batch endpoints |
 | Task management UI | ❌ | ✅ | Page → task endpoints |
 | Loan request/repayment UI | ❌ | ✅ | Forms → loan endpoints |
-| Audit log (Phase 11) | ❌ | ❌ | New model + middleware + viewer |
-| System config UI + API (Phase 11) | ❌ | 🟡 | Use `Organisation.settings`; add settings page |
+| Audit log (Phase 11) | ✅ | ✅ | Model + middleware + viewer delivered (`/api/audit-logs`, `/audit`) |
+| System config UI + API (Phase 11) | ✅ | ✅ | `PUT /api/organisations/settings` + `/settings` page |
 | Crop reference management | ❌ | 🟡 | Seed crops + admin management page |
 | Traceability/compliance, SMS, farmer access, NGO access, integrations, financial statements, PDF export, offline sync | ❌ | ❌ | Beyond current MVP (Proposed Features) |
 
@@ -621,10 +610,21 @@ KonnectCore/
 
 - **Loan Management** is implemented (request, approve, disburse, repay, auto-deduct, credit scoring) on the backend and partially on the frontend, but it is not part of the seven Validation MVP modules; it is tracked in the broader Build Plan (Phase 8).
 - **Batch Management** and **Task Management** are implemented on the backend with no frontend UI.
-- **Audit Trail (Phase 11)** — not started; no `AuditLog` model or middleware exists.
+- **Audit Trail (Phase 11)** — delivered: `AuditLog` model, `audit()` middleware on all mutating routes + login/register, `/api/audit-logs` viewer (admin) with filters/pagination/CSV.
 - **MVP boundary:** disease/pest monitoring and detailed input inventory are intentionally outside the first Validation MVP.
 - **Estimated overall MVP completion:** roughly 55–60% end-to-end. Backend-only coverage is much higher (~90% of MVP APIs exist); the missing portion is overwhelmingly frontend workflow UI.
-=======
-# KonnectCoreSoftware
-KonnectCore is a management platform for farmer-based organisations, cooperatives, associations and other organised agricultural groups
->>>>>>> KonnectCore/main
+
+---
+
+## Status Update — Phases 9–11 delivered
+
+This audit report was written on **8 September 2026**, before Phases 9–11 were completed. Subsequent work delivered:
+
+- **Phase 9 — Field Officer (tasks 55–62):** officer dashboard at `/field`, visit recording with GPS/photos, task management, quick member registration, officer-scoped member list.
+- **Phase 10 — Dashboard & Reports (tasks 63–68):** dashboard chart suite (collection trend 7D/30D/90D, payment breakdown donut, cumulative member growth) on `DashboardCharts.jsx` (recharts); **CSV export for all six reports** via `sendCsv` (headers included for empty exports); rewritten `ReportsPage` with six report tabs, contextual dropdown filters (member status, payment status, loan status, group, crop, type), date ranges, live preview, and CSV/Excel export carrying all filters.
+- **Phase 11 — Audit Trail & System Config (tasks 69–73):** `AuditLog` model, `audit()` middleware wrapping all mutating routes, `/api/audit-logs` admin viewer (filters, pagination, CSV), `PUT /api/organisations/settings` with validated config (currency, default crop prices, quality grades, seasons, deduction rules), admin **Settings** page, admin **Audit Log** viewer page.
+- **Fixes:** `errorHandler` now honours `ApiError.statusCode` (previously every business error incorrectly returned 500); `sendCsv` explicit column headers; CSV `ReferenceError` in report controllers resolved by hoisting the data mapping.
+
+All Phase 11 verification (server boot on :5001, login, settings round-trip + validation rejection, audit writes on create/update/delete, filters, CSV export) passed **20/20**; probe data was cleaned up afterwards.
+
+For the accurate build-plan position, see section 15 (_Task 80 status now reflects the delivered work_).

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { motion } from 'framer-motion'
+import toast from 'react-hot-toast'
 import api from '../services/api'
 import PageHeader from '../components/ui/PageHeader'
 import Button from '../components/ui/Button'
@@ -91,7 +92,7 @@ function CreateUserModal({ open, onClose, onSaved }) {
       await api.post('/users', form)
       onSaved()
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to create user')
+      toast.error(err.response?.data?.message || 'Failed to create user')
     } finally {
       setSaving(false)
     }
