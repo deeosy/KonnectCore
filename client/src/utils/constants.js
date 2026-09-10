@@ -73,3 +73,10 @@ export const ROLES = [
   { value: 'manager', label: 'Manager' },
   { value: 'fieldOfficer', label: 'Field Officer' },
 ]
+
+export const TASK_STATUSES = [
+  { value: 'pending', label: 'Pending' },
+  { value: 'in_progress', label: 'In Progress' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'cancelled', label: 'Cancelled' },
+]

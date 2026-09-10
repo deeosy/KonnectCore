@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 
-export default function Card({ children, className = '', title, subtitle, action, hover = false, ...props }) {
+export default function Card({ children, className = '', title, subtitle, icon, action, actions, hover = false, ...props }) {
+  const actionsList = actions ? (Array.isArray(actions) ? actions : [actions]) : []
   const Wrapper = hover ? motion.div : 'div'
   const wrapperProps = hover
     ? {
@@ -15,15 +16,27 @@ export default function Card({ children, className = '', title, subtitle, action
       {...wrapperProps}
       {...props}
     >
-      {(title || action) && (
-        <div className="flex items-center justify-between border-b border-border-light px-6 py-5">
-          <div>
-            {title && (
-              <h3 className="text-base font-bold text-dark">{title}</h3>
+      {(title || action || actionsList.length > 0) && (
+        <div className="flex items-center justify-between gap-4 border-b border-border-light px-6 py-5">
+          <div className="flex items-center gap-3">
+            {icon && (
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary">
+                {icon}
+              </div>
             )}
-            {subtitle && <p className="mt-0.5 text-sm text-muted">{subtitle}</p>}
+            <div>
+              {title && (
+                <h3 className="text-base font-bold text-dark">{title}</h3>
+              )}
+              {subtitle && <p className="mt-0.5 text-sm text-muted">{subtitle}</p>}
+            </div>
           </div>
-          {action}
+          <div className="flex shrink-0 items-center gap-2">
+            {action}
+            {actionsList.map((a, i) => (
+              <span key={i}>{a}</span>
+            ))}
+          </div>
         </div>
       )}
       <div className="p-6">{children}</div>

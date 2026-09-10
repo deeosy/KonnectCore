@@ -4,7 +4,7 @@ import Payment from "../models/Payment.js";
 import Group from "../models/Group.js";
 import Loan from "../models/Loan.js";
 import Expense from "../models/Expense.js";
-import { sendXlsx } from "../utils/export.js";
+import { sendXlsx, sendCsv } from "../utils/export.js";
 
 // Builds a date-range filter used across several report endpoints. Only one
 // bound (from or to) is required; both are optional.
@@ -38,20 +38,28 @@ export const memberReport = async (req, res, next) => {
       .populate("assignedOfficerId", "name")
       .lean();
 
+    const data = members.map((m) => ({
+      firstName: m.firstName,
+      lastName: m.lastName,
+      phone: m.phone,
+      membershipNumber: m.membershipNumber,
+      location: m.location,
+      status: m.status,
+      group: m.groupId?.name || "",
+      officer: m.assignedOfficerId?.name || "",
+      farmSize: m.farmSize ?? "",
+      crops: (m.mainCrops || []).join("; "),
+    }));
     if (req.query.format === "xlsx") {
-      const data = members.map((m) => ({
-        firstName: m.firstName,
-        lastName: m.lastName,
-        phone: m.phone,
-        membershipNumber: m.membershipNumber,
-        location: m.location,
-        status: m.status,
-        group: m.groupId?.name || "",
-        officer: m.assignedOfficerId?.name || "",
-        farmSize: m.farmSize ?? "",
-        crops: (m.mainCrops || []).join("; "),
-      }));
       return sendXlsx(res, data, "Members", "member-report.xlsx");
+    }
+    if (req.query.format === "csv") {
+      return sendCsv(
+        res,
+        data,
+        "member-report.csv",
+        ["firstName", "lastName", "phone", "membershipNumber", "location", "status", "group", "officer", "farmSize", "crops"],
+      );
     }
 
     res.json({ success: true, count: members.length, data: members });
@@ -81,21 +89,29 @@ export const collectionReport = async (req, res, next) => {
       .sort("-date")
       .lean();
 
+    const data = collections.map((c) => ({
+      member: `${c.memberId?.firstName || ""} ${c.memberId?.lastName || ""}`,
+      membershipNumber: c.memberId?.membershipNumber || "",
+      crop: c.crop,
+      quantity: c.quantity,
+      unit: c.unit,
+      grade: c.qualityGrade,
+      pricePerUnit: c.pricePerUnit,
+      totalValue: c.totalValue,
+      date: c.date,
+      location: c.collectionLocation || "",
+      capturedBy: c.capturedBy?.name || "",
+    }));
     if (req.query.format === "xlsx") {
-      const data = collections.map((c) => ({
-        member: `${c.memberId?.firstName || ""} ${c.memberId?.lastName || ""}`,
-        membershipNumber: c.memberId?.membershipNumber || "",
-        crop: c.crop,
-        quantity: c.quantity,
-        unit: c.unit,
-        grade: c.qualityGrade,
-        pricePerUnit: c.pricePerUnit,
-        totalValue: c.totalValue,
-        date: c.date,
-        location: c.collectionLocation || "",
-        capturedBy: c.capturedBy?.name || "",
-      }));
       return sendXlsx(res, data, "Collections", "collection-report.xlsx");
+    }
+    if (req.query.format === "csv") {
+      return sendCsv(
+        res,
+        data,
+        "collection-report.csv",
+        ["member", "membershipNumber", "crop", "quantity", "unit", "grade", "pricePerUnit", "totalValue", "date", "location", "capturedBy"],
+      );
     }
 
     const totals = collections.reduce(
@@ -135,19 +151,27 @@ export const paymentReport = async (req, res, next) => {
       .sort("-paymentDate")
       .lean();
 
+    const data = payments.map((p) => ({
+      member: `${p.memberId?.firstName || ""} ${p.memberId?.lastName || ""}`,
+      type: p.type,
+      amount: p.amount,
+      amountPaid: p.amountPaid,
+      status: p.status,
+      method: p.method,
+      receiptNumber: p.receiptNumber,
+      paymentDate: p.paymentDate,
+      processedBy: p.processedBy?.name || "",
+    }));
     if (req.query.format === "xlsx") {
-      const data = payments.map((p) => ({
-        member: `${p.memberId?.firstName || ""} ${p.memberId?.lastName || ""}`,
-        type: p.type,
-        amount: p.amount,
-        amountPaid: p.amountPaid,
-        status: p.status,
-        method: p.method,
-        receiptNumber: p.receiptNumber,
-        paymentDate: p.paymentDate,
-        processedBy: p.processedBy?.name || "",
-      }));
       return sendXlsx(res, data, "Payments", "payment-report.xlsx");
+    }
+    if (req.query.format === "csv") {
+      return sendCsv(
+        res,
+        data,
+        "payment-report.csv",
+        ["member", "type", "amount", "amountPaid", "status", "method", "receiptNumber", "paymentDate", "processedBy"],
+      );
     }
 
     const totals = {
@@ -194,19 +218,27 @@ export const groupReport = async (req, res, next) => {
       }),
     );
 
+    const data = summary.map((g) => ({
+      name: g.name,
+      type: g.type,
+      leader: g.leaderId?.name || "",
+      memberCount: g.memberCount,
+      totalCollections: g.totalCollections,
+      totalHarvest: g.totalHarvest,
+      totalHarvestValue: g.totalHarvestValue,
+      totalPayments: g.totalPayments,
+      totalPaid: g.totalPaid,
+    }));
     if (req.query.format === "xlsx") {
-      const data = summary.map((g) => ({
-        name: g.name,
-        type: g.type,
-        leader: g.leaderId?.name || "",
-        memberCount: g.memberCount,
-        totalCollections: g.totalCollections,
-        totalHarvest: g.totalHarvest,
-        totalHarvestValue: g.totalHarvestValue,
-        totalPayments: g.totalPayments,
-        totalPaid: g.totalPaid,
-      }));
       return sendXlsx(res, data, "Groups", "group-report.xlsx");
+    }
+    if (req.query.format === "csv") {
+      return sendCsv(
+        res,
+        data,
+        "group-report.csv",
+        ["name", "type", "leader", "memberCount", "totalCollections", "totalHarvest", "totalHarvestValue", "totalPayments", "totalPaid"],
+      );
     }
 
     res.json({ success: true, count: summary.length, data: summary });
@@ -225,18 +257,26 @@ export const loanReport = async (req, res, next) => {
       .sort("-createdAt")
       .lean();
 
+    const data = loans.map((l) => ({
+      member: `${l.memberId?.firstName || ""} ${l.memberId?.lastName || ""}`,
+      type: l.type,
+      amount: l.amount,
+      interestRate: l.interestRate,
+      amountRepaid: l.amountRepaid,
+      balance: l.balance,
+      status: l.status,
+      dueDate: l.dueDate,
+    }));
     if (req.query.format === "xlsx") {
-      const data = loans.map((l) => ({
-        member: `${l.memberId?.firstName || ""} ${l.memberId?.lastName || ""}`,
-        type: l.type,
-        amount: l.amount,
-        interestRate: l.interestRate,
-        amountRepaid: l.amountRepaid,
-        balance: l.balance,
-        status: l.status,
-        dueDate: l.dueDate,
-      }));
       return sendXlsx(res, data, "Loans", "loan-report.xlsx");
+    }
+    if (req.query.format === "csv") {
+      return sendCsv(
+        res,
+        data,
+        "loan-report.csv",
+        ["member", "type", "amount", "interestRate", "amountRepaid", "balance", "status", "dueDate"],
+      );
     }
 
     res.json({ success: true, count: loans.length, data: loans });
@@ -251,8 +291,21 @@ export const expenseReport = async (req, res, next) => {
       .populate("createdBy", "name")
       .sort("-date")
       .lean();
-    const total = expenses.reduce((s, e) => s + (e.amount || 0), 0);
-    res.json({ success: true, total, count: expenses.length, data: expenses });
+    const data = expenses.map((e) => ({
+      category: e.category,
+      description: e.description,
+      amount: e.amount,
+      date: e.date,
+      createdBy: e.createdBy?.name || "",
+    }));
+    if (req.query.format === "xlsx") {
+      return sendXlsx(res, data, "Expenses", "expense-report.xlsx");
+    }
+    if (req.query.format === "csv") {
+      return sendCsv(res, data, "expense-report.csv", ["category", "description", "amount", "date", "createdBy"]);
+    }
+    const total = data.reduce((s, e) => s + (e.amount || 0), 0);
+    res.json({ success: true, total, count: data.length, data });
   } catch (error) {
     next(error);
   }

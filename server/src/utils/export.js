@@ -11,3 +11,20 @@ export async function sendXlsx(res, data, sheetName, filename) {
   )
   return res.send(buf)
 }
+
+const escapeCsv = (value) => {
+  if (value === null || value === undefined) return ''
+  const str = String(value)
+  return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str
+}
+
+export function sendCsv(res, data, filename, columns) {
+  const headers = columns && columns.length ? columns : Object.keys(data[0] || {})
+  const rows = [
+    headers.join(','),
+    ...data.map((row) => headers.map((h) => escapeCsv(row[h])).join(',')),
+  ]
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8')
+  return res.send(rows.join('\r\n'))
+}

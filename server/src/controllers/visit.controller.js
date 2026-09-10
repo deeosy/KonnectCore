@@ -10,8 +10,11 @@ export const getVisits = async (req, res, next) => {
   try {
     const filter = {};
     if (req.query.memberId) filter.memberId = req.query.memberId;
+    // Field officers are always pinned to their own visits — the query param
+    // is ignored for them so they cannot pass someone else's officerId to
+    // bypass the scope check. Only leaders can filter by officer.
     if (req.user.role === "fieldOfficer") filter.officerId = req.user._id;
-    if (req.query.officerId) filter.officerId = req.query.officerId;
+    else if (req.query.officerId) filter.officerId = req.query.officerId;
 
     const visits = await FieldVisit.find(filter)
       .populate("memberId", "firstName lastName phone membershipNumber photo")

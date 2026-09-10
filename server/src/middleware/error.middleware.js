@@ -5,7 +5,9 @@ export const notFound = (req, res, next) => {
 };
 
 export const errorHandler = (err, req, res, next) => {
-  let statusCode = res.statusCode === 200 ? 500 : res.statusCode;
+  // Prefer an explicit status set by the application (ApiError/notFound),
+  // falling back to whatever the response already carries, then 500.
+  let statusCode = err.statusCode || (res.statusCode >= 400 ? res.statusCode : 500);
   let message = err.message;
 
   // These Mongoose errors are translated to user-friendly HTTP responses so

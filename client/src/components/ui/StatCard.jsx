@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 
-export default function StatCard({ icon: Icon, label, value, sub, accent = 'primary', className = '' }) {
+export default function StatCard({ icon: Icon, label, value, sub, accent = 'primary', inline = false, className = '' }) {
   const accents = {
     primary: { bg: 'bg-primary-50', text: 'text-primary', value: 'text-dark' },
     success: { bg: 'bg-success-50', text: 'text-success', value: 'text-dark' },
@@ -23,8 +23,17 @@ export default function StatCard({ icon: Icon, label, value, sub, accent = 'prim
         <Icon className={`h-5 w-5 ${a.text}`} />
       </div>
       <p className={`text-2xl font-bold tracking-tight ${a.value}`}>{value}</p>
-      <p className="mt-1 text-sm text-muted">{label}</p>
-      {sub && <p className="mt-2 text-xs font-semibold text-primary">{sub}</p>}
+      {inline && sub ? (
+        <p className="mt-1 flex items-baseline gap-1.5 text-sm text-muted">
+          <span>{label}</span>
+          <span className="text-xs font-semibold text-primary">{sub}</span>
+        </p>
+      ) : (
+        <>
+          <p className="mt-1 text-sm text-muted">{label}</p>
+          {sub && <p className="mt-2 text-xs font-semibold text-primary">{sub}</p>}
+        </>
+      )}
     </motion.div>
   )
 }

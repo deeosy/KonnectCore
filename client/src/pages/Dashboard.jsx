@@ -16,6 +16,7 @@ import PageHeader from '../components/ui/PageHeader'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import StatCard from '../components/ui/StatCard'
+import DashboardCharts from '../components/dashboard/DashboardCharts'
 import { formatCurrency, formatNumber, formatDateTime } from '../utils/format'
 
 const activityStyles = {
@@ -106,7 +107,14 @@ export default function Dashboard() {
           <StatCard icon={Layers} label="Groups" value={formatNumber(stats?.totalGroups)} accent="info" />
         </motion.div>
         <motion.div variants={staggerItem}>
-          <StatCard icon={PackageCheck} label="Collections" value={formatNumber(stats?.totalCollections)} sub={`${formatNumber(stats?.totalCollectionsWeight)} kg`} accent="primary" />
+          <StatCard
+            icon={PackageCheck}
+            label="Collections"
+            value={formatNumber(stats?.totalCollections)}
+            sub={`${formatNumber(stats?.totalCollectionsWeight)} kg`}
+            accent="primary"
+            inline
+          />
         </motion.div>
         <motion.div variants={staggerItem}>
           <StatCard icon={Wallet} label="Payments Paid" value={formatCurrency(stats?.totalPaymentsPaid)} accent="success" />
@@ -115,6 +123,10 @@ export default function Dashboard() {
           <StatCard icon={AlertCircle} label="Outstanding Dues" value={formatCurrency(stats?.outstandingDues)} accent="danger" />
         </motion.div>
       </motion.div>
+
+      <div className="mt-8">
+        <DashboardCharts />
+      </div>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-3">
         {/* Recent Activity */}

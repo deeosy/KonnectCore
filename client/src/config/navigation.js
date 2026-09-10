@@ -11,12 +11,18 @@ import {
   MapPinned,
   Settings,
   BarChart3,
+  ClipboardList,
+  UserCog,
+  ScrollText,
 } from 'lucide-react'
 
 export const navSections = [
   {
     title: 'Overview',
-    items: [{ name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, roles: ['admin', 'manager', 'fieldOfficer'] }],
+    items: [
+      { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, roles: ['admin', 'manager', 'fieldOfficer'] },
+      { name: 'Field', path: '/field', icon: ClipboardList, roles: ['admin', 'manager', 'fieldOfficer'] },
+    ],
   },
   {
     title: 'Management',
@@ -46,7 +52,9 @@ export const navSections = [
   {
     title: 'System',
     items: [
-      { name: 'Users', path: '/users', icon: Settings, roles: ['admin'] },
+      { name: 'Users', path: '/users', icon: UserCog, roles: ['admin'] },
+      { name: 'Audit Logs', path: '/audit', icon: ScrollText, roles: ['admin'] },
+      { name: 'Settings', path: '/settings', icon: Settings, roles: ['admin'] },
     ],
   },
 ]

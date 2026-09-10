@@ -17,8 +17,11 @@ import ExpensesPage from './pages/ExpensesPage'
 import LoansPage from './pages/LoansPage'
 import LoanDetailPage from './pages/LoanDetailPage'
 import VisitsPage from './pages/VisitsPage'
+import FieldDashboard from './pages/FieldDashboard'
 import ReportsPage from './pages/ReportsPage'
 import UsersPage from './pages/UsersPage'
+import AuditLogsPage from './pages/AuditLogsPage'
+import SettingsPage from './pages/SettingsPage'
 
 function App() {
   return (
@@ -101,6 +104,14 @@ function App() {
             />
             <Route path="/visits" element={<VisitsPage />} />
             <Route
+              path="/field"
+              element={
+                <ProtectedRoute roles={['admin', 'manager', 'fieldOfficer']}>
+                  <FieldDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/reports"
               element={
                 <ProtectedRoute roles={['admin', 'manager']}>
@@ -113,6 +124,22 @@ function App() {
               element={
                 <ProtectedRoute roles={['admin']}>
                   <UsersPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/audit"
+              element={
+                <ProtectedRoute roles={['admin']}>
+                  <AuditLogsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute roles={['admin']}>
+                  <SettingsPage />
                 </ProtectedRoute>
               }
             />

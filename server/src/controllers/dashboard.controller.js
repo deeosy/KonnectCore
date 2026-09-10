@@ -219,3 +219,42 @@ export const getMemberDistribution = async (req, res, next) => {
     next(error);
   }
 };
+
+// Cumulative member count over time, bucketed per full month. This lets the
+// dashboard render a growth line without pulling every member row. Runs a
+// single aggregation over createdAt.
+export const getMemberGrowth = async (req, res, next) => {
+  try {
+    const months = Math.min(parseInt(req.query.months) || 12, 36);
+    const since = new Date();
+    since.setDate(1);
+    since.setMonth(since.getMonth() - (months - 1));
+    since.setHours(0, 0, 0, 0);
+
+    const buckets = await Member.aggregate([
+      { $match: { createdAt: { $gte: since } } },
+      {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
+          added: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    const bucketMap = new Map(buckets.map((b) => [b._id, b.added]));
+    const data = [];
+    let running = await Member.countDocuments({ createdAt: { $lt: since } });
+    for (let i = 0; i < months; i += 1) {
+      const d = new Date(since);
+      d.setMonth(since.getMonth() + i);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      running += bucketMap.get(key) || 0;
+      data.push({ month: key, added: bucketMap.get(key) || 0, running });
+    }
+
+    res.json({ success: true, data });
+  } catch (error) {
+    next(error);
+  }
+};

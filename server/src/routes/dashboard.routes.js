@@ -5,6 +5,7 @@ import {
   getCollectionTrend,
   getPaymentBreakdown,
   getMemberDistribution,
+  getMemberGrowth,
 } from '../controllers/dashboard.controller.js'
 import { protect } from '../middleware/auth.middleware.js'
 
@@ -17,5 +18,6 @@ router.get('/activity', getRecentActivity)
 router.get('/collection-trend', getCollectionTrend)
 router.get('/payment-breakdown', getPaymentBreakdown)
 router.get('/member-distribution', getMemberDistribution)
+router.get('/member-growth', getMemberGrowth)
 
 export default router

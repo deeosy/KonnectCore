@@ -11,6 +11,7 @@ import {
   hubtelCallback,
 } from '../controllers/payment.controller.js'
 import { protect, authorize } from '../middleware/auth.middleware.js'
+import { audit } from '../utils/audit.js'
 
 const router = Router()
 
@@ -22,18 +23,18 @@ router.post('/hubtel/callback', hubtelCallback)
 router.use(protect)
 
 router.get('/outstanding', authorize('admin', 'manager'), getOutstanding)
-router.post('/produce', authorize('admin', 'manager', 'fieldOfficer'), createProducePayment)
+router.post('/produce', authorize('admin', 'manager', 'fieldOfficer'), audit('create', 'payment'), createProducePayment)
 router.get('/:id/status', authorize('admin', 'manager'), getPaymentGatewayStatus)
 
 router
   .route('/')
   .get(getPayments)
-  .post(authorize('admin', 'manager'), createPayment)
+  .post(authorize('admin', 'manager'), audit('create', 'payment'), createPayment)
 
 router
   .route('/:id')
   .get(getPayment)
-  .put(authorize('admin', 'manager'), updatePayment)
-  .delete(authorize('admin'), deletePayment)
+  .put(authorize('admin', 'manager'), audit('update', 'payment'), updatePayment)
+  .delete(authorize('admin'), audit('delete', 'payment'), deletePayment)
 
 export default router

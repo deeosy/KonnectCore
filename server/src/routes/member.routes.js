@@ -11,6 +11,7 @@ import {
 import { importMembers, exportMembers } from '../controllers/import.controller.js'
 import { getMemberHistory } from '../controllers/history.controller.js'
 import { protect, authorize } from '../middleware/auth.middleware.js'
+import { audit } from '../utils/audit.js'
 import {
   uploadMemberPhoto,
   uploadMemberDocument,
@@ -58,27 +59,29 @@ router.get('/import/template', authorize('admin', 'manager'), (req, res, next) =
 router
   .route('/')
   .get(getMembers)
-  .post(authorize('admin', 'manager', 'fieldOfficer'), uploadMemberPhoto, createMember)
+  .post(authorize('admin', 'manager', 'fieldOfficer'), audit('create', 'member'), uploadMemberPhoto, createMember)
 
-router.post('/import', authorize('admin', 'manager'), uploadCsv, importMembers)
+router.post('/import', authorize('admin', 'manager'), audit('import', 'member'), uploadCsv, importMembers)
 router.get('/export', authorize('admin', 'manager'), exportMembers)
 router.get('/:id/history', getMemberHistory)
 
 router
   .route('/:id')
   .get(getMember)
-  .put(authorize('admin', 'manager', 'fieldOfficer'), uploadMemberPhoto, updateMember)
-  .delete(authorize('admin'), deleteMember)
+  .put(authorize('admin', 'manager', 'fieldOfficer'), audit('update', 'member'), uploadMemberPhoto, updateMember)
+  .delete(authorize('admin'), audit('delete', 'member'), deleteMember)
 
 router.post(
   '/:id/documents',
   authorize('admin', 'manager', 'fieldOfficer'),
+  audit('attach_document', 'member', { resourceIdFrom: (req) => req.params.id }),
   uploadMemberDocument,
   attachDocument
 )
 router.delete(
   '/:id/documents/:docId',
   authorize('admin', 'manager'),
+  audit('remove_document', 'member', { resourceIdFrom: (req) => req.params.id }),
   removeDocument
 )
 

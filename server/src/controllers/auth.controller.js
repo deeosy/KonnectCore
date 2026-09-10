@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import { ApiError } from "../middleware/error.middleware.js";
+import { logAudit } from "../utils/audit.js";
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -37,6 +38,16 @@ export const register = async (req, res, next) => {
         phone: user.phone,
         token: generateToken(user._id),
       },
+    });
+    logAudit({
+      user,
+      action: "register",
+      resource: "auth",
+      resourceId: user._id,
+      summary: `${user.name} registered (${user.email})`,
+      details: { email: user.email, role: user.role },
+      success: true,
+      req,
     });
   } catch (error) {
     next(error);
@@ -80,6 +91,16 @@ export const login = async (req, res, next) => {
         organisationId: user.organisationId,
         token: generateToken(user._id),
       },
+    });
+    logAudit({
+      user,
+      action: "login",
+      resource: "auth",
+      resourceId: user._id,
+      summary: `${user.name} signed in`,
+      details: { email: user.email },
+      success: true,
+      req,
     });
   } catch (error) {
     next(error);

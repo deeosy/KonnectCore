@@ -20,6 +20,7 @@ import loanRoutes from "./routes/loan.routes.js";
 import visitRoutes from "./routes/visit.routes.js";
 import dashboardRoutes from "./routes/dashboard.routes.js";
 import reportRoutes from "./routes/report.routes.js";
+import auditRoutes from "./routes/audit.routes.js";
 import { errorHandler, notFound } from "./middleware/error.middleware.js";
 import { markOverdueLoans } from "./services/overdue.service.js";
 
@@ -74,6 +75,7 @@ app.use("/api/loans", loanRoutes);
 app.use("/api/visits", visitRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/reports", reportRoutes);
+app.use("/api/audit-logs", auditRoutes);
 
 // 404 handler
 app.use(notFound);
