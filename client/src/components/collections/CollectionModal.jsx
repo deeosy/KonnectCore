@@ -8,6 +8,7 @@ import Input from '../ui/Input'
 import Select from '../ui/Select'
 import { formatCurrency } from '../../utils/format'
 import { CROPS as DEFAULT_CROPS, QUALITY_GRADES } from '../../utils/constants'
+import { required, positive, requiredDate } from '../../utils/validate'
 
 const dateInputValue = (date) => {
   if (!date) return ''
@@ -39,12 +40,13 @@ export default function CollectionModal({ open, onClose, onSaved, member, collec
   const [catalogCrops, setCatalogCrops] = useState([])
   const [memberSearch, setMemberSearch] = useState('')
   const [memberResults, setMemberResults] = useState([])
+  const [pickedMember, setPickedMember] = useState(null)
   const [searching, setSearching] = useState(false)
   const searchTimer = useRef(null)
   const manualPrice = useRef(false)
+  const [errors, setErrors] = useState({})
 
   const isEdit = !!collection
-  const presetMemberId = isEdit ? collection.memberId?._id : member?._id
   const presetMemberName = isEdit
     ? collection.memberId
       ? `${collection.memberId.firstName} ${collection.memberId.lastName}`
@@ -114,6 +116,8 @@ export default function CollectionModal({ open, onClose, onSaved, member, collec
     setPhoto(null)
     setMemberSearch('')
     setMemberResults([])
+    setPickedMember(collection?.memberId || member || null)
+    setErrors({})
   }, [open, collection, member])
 
   const applyDefaultPrice = (crop, current = '') => {
@@ -149,10 +153,14 @@ export default function CollectionModal({ open, onClose, onSaved, member, collec
   const totalValue = (Number(form.quantity) || 0) * (Number(form.pricePerUnit) || 0)
 
   const submit = async () => {
-    if (!form.crop || !form.quantity || !form.memberId) {
-      toast.error('Select a member, crop and quantity')
-      return
+    const nextErrors = {
+      memberId: required(form.memberId, 'Member'),
+      crop: required(form.crop, 'Crop'),
+      quantity: positive(form.quantity, 'Quantity'),
+      date: requiredDate(form.date),
     }
+    setErrors(nextErrors)
+    if (Object.values(nextErrors).some((v) => v)) return
     setSaving(true)
     try {
       const fd = new FormData()
@@ -223,6 +231,8 @@ export default function CollectionModal({ open, onClose, onSaved, member, collec
                     key={m._id}
                     onClick={() => {
                       setForm((f) => ({ ...f, memberId: m._id }))
+                      setPickedMember(m)
+                      setErrors((e) => (e.memberId ? { ...e, memberId: '' } : e))
                       setMemberSearch('')
                       setMemberResults([])
                     }}
@@ -237,8 +247,22 @@ export default function CollectionModal({ open, onClose, onSaved, member, collec
                 ))}
               </div>
             )}
-            {form.memberId && !selectedMember && (
+            {form.memberId && pickedMember && !memberSearch && (
+              <div className="mt-2 flex items-center gap-2 rounded-xl border border-primary-200 bg-primary-50 px-3 py-2">
+                <User className="h-4 w-4 text-primary" />
+                <span className="text-sm font-semibold text-primary">
+                  {pickedMember.firstName} {pickedMember.lastName}
+                </span>
+                <span className="ml-auto text-xs text-muted">
+                  {pickedMember.membershipNumber || pickedMember.phone}
+                </span>
+              </div>
+            )}
+            {form.memberId && !memberSearch && !pickedMember && (
               <p className="mt-1.5 text-xs font-medium text-primary">Selected — search again to change</p>
+            )}
+            {errors.memberId && (
+              <p className="mt-1.5 text-xs font-medium text-danger">{errors.memberId}</p>
             )}
           </div>
         )}
@@ -247,7 +271,11 @@ export default function CollectionModal({ open, onClose, onSaved, member, collec
           placeholder="Select crop"
           options={crops}
           value={form.crop}
-          onChange={(e) => applyDefaultPrice(e.target.value, form.pricePerUnit)}
+          error={errors.crop}
+          onChange={(e) => {
+            applyDefaultPrice(e.target.value, form.pricePerUnit)
+            setErrors((er) => (er.crop ? { ...er, crop: '' } : er))
+          }}
         />
         <div className="grid grid-cols-2 gap-2">
           <Input
@@ -256,7 +284,11 @@ export default function CollectionModal({ open, onClose, onSaved, member, collec
             min="0"
             step="any"
             value={form.quantity}
-            onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value }))}
+            error={errors.quantity}
+            onChange={(e) => {
+              setForm((f) => ({ ...f, quantity: e.target.value }))
+              setErrors((er) => (er.quantity ? { ...er, quantity: '' } : er))
+            }}
           />
           <Select
             label="Unit"
@@ -287,7 +319,11 @@ export default function CollectionModal({ open, onClose, onSaved, member, collec
           label="Collection date *"
           type="date"
           value={form.date}
-          onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
+          error={errors.date}
+          onChange={(e) => {
+            setForm((f) => ({ ...f, date: e.target.value }))
+            setErrors((er) => (er.date ? { ...er, date: '' } : er))
+          }}
           hint="Defaults to today; choose an earlier date to back-date"
         />
         <Input

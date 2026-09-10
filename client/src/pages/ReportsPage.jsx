@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { FileSpreadsheet, FileDown } from "lucide-react";
+import toast from "react-hot-toast";
 import api from "../services/api";
 import PageHeader from "../components/ui/PageHeader";
 import Card from "../components/ui/Card";
@@ -235,7 +236,7 @@ export default function ReportsPage() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message || 'Export failed');
     } finally {
       setExporting("");
     }

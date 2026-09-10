@@ -8,6 +8,7 @@ import Input from '../ui/Input'
 import Select from '../ui/Select'
 import { PAYMENT_TYPES, PAYMENT_METHODS } from '../../utils/constants'
 import { formatCurrency } from '../../utils/format'
+import { required, positive, requiredDate, phone as phoneValidator } from '../../utils/validate'
 
 const dateInputValue = (date) => {
   if (!date) return ''
@@ -51,6 +52,7 @@ export default function PaymentModal({ open, onClose, onSaved, member, initial }
   const [pickedMember, setPickedMember] = useState(null)
   const [searching, setSearching] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [errors, setErrors] = useState({})
   const searchTimer = useRef(null)
 
   const presetMember = member || (initial?.memberId ? { _id: initial.memberId } : null)
@@ -76,10 +78,11 @@ export default function PaymentModal({ open, onClose, onSaved, member, initial }
       msisdn: initial?.msisdn || member?.phone || '',
       channel: 'mtn-gh',
     })
-    setMemberSearch('')
-    setMemberResults([])
-    setPickedMember(member || (initial?.memberId ? { _id: initial.memberId, ...(initial.memberName ? { firstName: initial.memberName } : {}) } : null))
-  }, [open, member, initial])
+setMemberSearch('')
+      setMemberResults([])
+      setPickedMember(member || (initial?.memberId ? { _id: initial.memberId, ...(initial.memberName ? { firstName: initial.memberName } : {}) } : null))
+      setErrors({})
+    }, [open, member, initial])
 
   const needsGateway =
     form.method === 'mobile_money' &&
@@ -113,10 +116,14 @@ export default function PaymentModal({ open, onClose, onSaved, member, initial }
   const status = amountPaid >= amount && amount > 0 ? 'paid' : amountPaid > 0 ? 'part_paid' : 'pending'
 
   const submit = async () => {
-    if (!form.memberId || !form.amount) {
-      toast.error('Select a member and enter an amount')
-      return
+    const nextErrors = {
+      memberId: required(form.memberId, 'Member'),
+      amount: positive(form.amount, 'Amount'),
+      paymentDate: requiredDate(form.paymentDate),
+      msisdn: needsGateway ? phoneValidator(form.msisdn) : '',
     }
+    setErrors(nextErrors)
+    if (Object.values(nextErrors).some((v) => v)) return
     setSaving(true)
     try {
       const payload = {
@@ -187,6 +194,7 @@ export default function PaymentModal({ open, onClose, onSaved, member, initial }
                     key={m._id}
                     onClick={() => {
                       setForm((f) => ({ ...f, memberId: m._id, msisdn: f.msisdn || m.phone || '' }))
+                      setErrors((e) => (e.memberId ? { ...e, memberId: '' } : e))
                       setPickedMember(m)
                       setMemberSearch('')
                       setMemberResults([])
@@ -214,6 +222,9 @@ export default function PaymentModal({ open, onClose, onSaved, member, initial }
             {form.memberId && !memberSearch && !pickedMember && (
               <p className="mt-1.5 text-xs font-medium text-primary">Selected — search again to change</p>
             )}
+            {errors.memberId && (
+              <p className="mt-1.5 text-xs font-medium text-danger">{errors.memberId}</p>
+            )}
           </div>
         )}
 
@@ -236,7 +247,11 @@ export default function PaymentModal({ open, onClose, onSaved, member, initial }
           min="0"
           step="any"
           value={form.amount}
-          onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
+          error={errors.amount}
+          onChange={(e) => {
+            setForm((f) => ({ ...f, amount: e.target.value }))
+            setErrors((er) => (er.amount ? { ...er, amount: '' } : er))
+          }}
         />
         <Input
           label="Amount paid"
@@ -252,7 +267,11 @@ export default function PaymentModal({ open, onClose, onSaved, member, initial }
           label="Payment date *"
           type="date"
           value={form.paymentDate}
-          onChange={(e) => setForm((f) => ({ ...f, paymentDate: e.target.value }))}
+          error={errors.paymentDate}
+          onChange={(e) => {
+            setForm((f) => ({ ...f, paymentDate: e.target.value }))
+            setErrors((er) => (er.paymentDate ? { ...er, paymentDate: '' } : er))
+          }}
           hint="Defaults to today; pick an earlier date to back-date"
         />
         <Input
@@ -267,7 +286,11 @@ export default function PaymentModal({ open, onClose, onSaved, member, initial }
             <Input
               label="Mobile money number *"
               value={form.msisdn}
-              onChange={(e) => setForm((f) => ({ ...f, msisdn: e.target.value }))}
+              error={errors.msisdn}
+              onChange={(e) => {
+                setForm((f) => ({ ...f, msisdn: e.target.value }))
+                setErrors((er) => (er.msisdn ? { ...er, msisdn: '' } : er))
+              }}
               hint={member?.phone ? `Member's phone on file: ${member.phone}` : 'Member phone, e.g. 0244 123 456'}
             />
             <Select

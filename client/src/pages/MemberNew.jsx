@@ -7,7 +7,9 @@ import PageHeader from "../components/ui/PageHeader";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
 import Select from "../components/ui/Select";
+import FormField from "../components/ui/FormField";
 import { MEMBER_STATUSES, CROPS } from "../utils/constants";
+import { required, phone, lat, lng, nonNegative } from "../utils/validate";
 
 const emptyForm = {
   firstName: "",
@@ -61,6 +63,7 @@ export default function MemberNew() {
   const [officers, setOfficers] = useState([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     api
@@ -104,7 +107,10 @@ export default function MemberNew() {
     }
   }, [editId, navigate]);
 
-  const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
+  const set = (key, value) => {
+    setForm((f) => ({ ...f, [key]: value }));
+    setErrors((e) => (e[key] ? { ...e, [key]: "" } : e));
+  };
 
   const handleCropToggle = (crop) => {
     setForm((f) => ({
@@ -113,10 +119,20 @@ export default function MemberNew() {
         ? f.mainCrops.filter((c) => c !== crop)
         : [...f.mainCrops, crop],
     }));
+    setErrors((e) => (e.mainCrops ? { ...e, mainCrops: "" } : e));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const nextErrors = {
+      firstName: required(form.firstName, "First name"),
+      phone: phone(form.phone),
+      farmSize: nonNegative(form.farmSize, "Farm size"),
+      gpsLat: lat(form.gpsLat),
+      gpsLng: lng(form.gpsLng),
+    };
+    setErrors(nextErrors);
+    if (Object.values(nextErrors).some((v) => v)) return;
     setError("");
     setSaving(true);
     const fd = new FormData();
@@ -177,6 +193,7 @@ export default function MemberNew() {
               label="First Name *"
               value={form.firstName}
               onChange={(e) => set("firstName", e.target.value)}
+              error={errors.firstName}
               required
             />
             <Input
@@ -188,6 +205,7 @@ export default function MemberNew() {
               label="Phone"
               value={form.phone}
               onChange={(e) => set("phone", e.target.value)}
+              error={errors.phone}
             />
             <Input
               label="Membership Number"
@@ -216,15 +234,17 @@ export default function MemberNew() {
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-dark">
-                Photo
-              </label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setPhoto(e.target.files[0])}
-                className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm text-dark outline-none transition-all duration-150 focus:border-primary focus:ring-2 focus:ring-primary-100"
-              />
+              <FormField label="Photo" error={errors.photo}>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    setPhoto(e.target.files[0]);
+                    setErrors((e2) => (e2.photo ? { ...e2, photo: "" } : e2));
+                  }}
+                  className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm text-dark outline-none transition-all duration-150 focus:border-primary focus:ring-2 focus:ring-primary-100"
+                />
+              </FormField>
             </div>
           </div>
         </FormSection>
@@ -252,6 +272,7 @@ export default function MemberNew() {
               step="any"
               value={form.gpsLat}
               onChange={(e) => set("gpsLat", e.target.value)}
+              error={errors.gpsLat}
             />
             <Input
               label="GPS Longitude"
@@ -259,6 +280,7 @@ export default function MemberNew() {
               step="any"
               value={form.gpsLng}
               onChange={(e) => set("gpsLng", e.target.value)}
+              error={errors.gpsLng}
             />
           </div>
         </FormSection>
@@ -271,6 +293,7 @@ export default function MemberNew() {
               step="any"
               value={form.farmSize}
               onChange={(e) => set("farmSize", e.target.value)}
+              error={errors.farmSize}
             />
             <Select
               label="Group"
