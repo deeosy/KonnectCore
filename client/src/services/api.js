@@ -1,3 +1,5 @@
+// Axios HTTP client configured with a shared baseURL, automatic JWT
+// injection, and global 401 redirect handling for the KonnectCore frontend.
 import axios from "axios";
 
 // The JWT is stored in localStorage and attached to every request via the

@@ -1,3 +1,8 @@
+// ExpensesPage.jsx - Cooperative expense tracking with category breakdown and date filters.
+// Calls GET /expenses (category/from/to filters), POST /expenses, PUT /expenses/:id,
+// and DELETE /expenses/:id. Totals and per-category sums are derived from loaded rows.
+// Create and edit share the ExpenseDrawer slide-over (edit mode indicated by `expense`).
+
 import { useCallback, useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
@@ -13,6 +18,7 @@ import EmptyState from '../components/ui/EmptyState'
 import { formatCurrency, formatDate } from '../utils/format'
 import { positive, requiredDate } from '../utils/validate'
 
+// EXPENSE_CATEGORIES - fixed category list used for the filter dropdown and the form.
 const EXPENSE_CATEGORIES = [
   { value: 'fuel', label: 'Fuel' },
   { value: 'salary', label: 'Salary' },
@@ -31,6 +37,8 @@ const CATEGORY_ICONS = {
   other: CircleEllipsis,
 }
 
+// dateInputValue - formats a date as YYYY-MM-DD for <input type="date">.
+// toISOString is UTC-based; safe here because dates are constructed at local midnight.
 const dateInputValue = (date) => {
   if (!date) return ''
   const d = new Date(date)
@@ -38,6 +46,7 @@ const dateInputValue = (date) => {
   return d.toISOString().slice(0, 10)
 }
 
+// ExpensesPage - main page; owns filter state, delete action, and the create/edit drawer.
 export default function ExpensesPage() {
   const [expenses, setExpenses] = useState([])
   const [loading, setLoading] = useState(true)
@@ -69,6 +78,7 @@ export default function ExpensesPage() {
     }
   }
 
+  // Derived totals: overall expense sum and a per-category breakdown for the stat cards.
   const total = expenses.reduce((s, e) => s + (e.amount || 0), 0)
   const byCategory = expenses.reduce((acc, e) => {
     acc[e.category] = (acc[e.category] || 0) + (e.amount || 0)
@@ -183,6 +193,8 @@ export default function ExpensesPage() {
   )
 }
 
+// ExpenseDrawer - slide-over create/edit form; validates amount and date before
+// POST/PUT /expenses. Date values are coerced: kept as-is when provided, else a Date object.
 function ExpenseDrawer({ open, expense, onClose, onSaved }) {
   const [form, setForm] = useState({ category: 'fuel', amount: '', description: '', date: dateInputValue(new Date()), receipt: '' })
   const [saving, setSaving] = useState(false)

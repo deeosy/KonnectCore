@@ -1,3 +1,8 @@
+// LoansPage.jsx - Loan management list with stats, filters, and lifecycle actions.
+// Calls GET /loans, PUT /loans/:id/approve, PUT /loans/:id/disburse, GET /loans/overdue.
+// New loan requests open the LoanRequestModal. Filters are applied client-side via useMemo;
+// stats (lent/outstanding/completed/overdue) are derived from the loaded loans.
+
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
@@ -15,6 +20,7 @@ import LoanRequestModal from '../components/loans/LoanRequestModal'
 import { LOAN_TYPES, LOAN_STATUSES } from '../utils/constants'
 import { formatCurrency, formatDate } from '../utils/format'
 
+// LoansPage - main page; owns loan state, status/type/search filters, and approve/disburse actions.
 export default function LoansPage() {
   const [loans, setLoans] = useState([])
   const [loading, setLoading] = useState(true)
@@ -55,6 +61,7 @@ export default function LoansPage() {
     }
   }
 
+  // checkOverdue - runs the server-side overdue detection and reports how many were flagged.
   const checkOverdue = async () => {
     try {
       const { data } = await api.get('/loans/overdue')
@@ -67,6 +74,7 @@ export default function LoansPage() {
     }
   }
 
+  // filtered - client-side filtering of the loaded loans by status, type, and member search.
   const filtered = useMemo(() => {
     let list = loans
     if (filters.status) list = list.filter((l) => l.status === filters.status)
@@ -82,6 +90,7 @@ export default function LoansPage() {
     return list
   }, [loans, filters])
 
+  // Derived stats: money lent and outstanding on active loans, plus completed/overdue counts.
   const active = loans.filter((l) => !['rejected', 'completed'].includes(l.status))
   const stats = {
     lent: active.reduce((s, l) => s + (l.amount || 0), 0),

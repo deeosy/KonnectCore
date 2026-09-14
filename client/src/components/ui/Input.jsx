@@ -1,5 +1,11 @@
+/*
+ * Input - Form input with optional label, validation error, hint text, and leading icon.
+ * Props: label, error (displays error message below), hint (shown when no error),
+ *        icon (lucide component rendered inside the field), id, plus native input props.
+ */
 import { forwardRef } from 'react'
 
+// Wrapped in forwardRef so parent components can attach a ref to the underlying <input>.
 const Input = forwardRef(({ label, error, hint, icon: Icon, className = '', id, ...props }, ref) => {
   const fieldId = id || props.name
 
@@ -23,6 +29,7 @@ const Input = forwardRef(({ label, error, hint, icon: Icon, className = '', id, 
           ref={ref}
           id={fieldId}
           className={`w-full rounded-xl border bg-surface px-4 py-3 text-sm text-dark placeholder-muted-light outline-none transition-all duration-150 focus:ring-2 ${
+            // Add left padding when an icon is present so text doesn't overlap the icon.
             Icon ? 'pl-10' : ''
           } ${
             error
@@ -32,6 +39,7 @@ const Input = forwardRef(({ label, error, hint, icon: Icon, className = '', id, 
           {...props}
         />
       </div>
+      {/* Show error message if present; otherwise show hint when no error exists */}
       {error && <p className="mt-1.5 text-xs font-medium text-danger">{error}</p>}
       {hint && !error && <p className="mt-1.5 text-xs text-muted">{hint}</p>}
     </div>

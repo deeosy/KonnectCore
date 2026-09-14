@@ -1,6 +1,11 @@
+// Crop reference-data controller. Maintains the shared catalog of crop
+// types used across collections, farm profiles, and reports.
 import Crop from "../models/Crop.js";
 import { ApiError } from "../middleware/error.middleware.js";
 
+// GET /api/crops
+// Lists the crop catalog, optionally only active crops (?active=true),
+// ordered by sortOrder then name.
 export const getCrops = async (req, res, next) => {
   try {
     const { active } = req.query;
@@ -14,6 +19,8 @@ export const getCrops = async (req, res, next) => {
   }
 };
 
+// POST /api/crops
+// Creates a catalog crop; createdBy is pinned to the acting user.
 export const createCrop = async (req, res, next) => {
   try {
     const crop = await Crop.create({
@@ -30,6 +37,8 @@ export const createCrop = async (req, res, next) => {
   }
 };
 
+// PATCH /api/crops/:id
+// Updates a crop's fields (name, category, active flag, sort order).
 export const updateCrop = async (req, res, next) => {
   try {
     const crop = await Crop.findByIdAndUpdate(req.params.id, req.body, {
@@ -46,6 +55,8 @@ export const updateCrop = async (req, res, next) => {
   }
 };
 
+// DELETE /api/crops/:id
+// Removes a crop from the catalog.
 export const deleteCrop = async (req, res, next) => {
   try {
     const crop = await Crop.findByIdAndDelete(req.params.id);

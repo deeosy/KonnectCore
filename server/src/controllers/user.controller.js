@@ -1,6 +1,10 @@
+// User management controller (admin CRUD). Lists, creates, updates, and
+// deletes platform users. All responses exclude the password hash.
 import User from "../models/User.js";
 import { ApiError } from "../middleware/error.middleware.js";
 
+// GET /api/users
+// Lists all users (newest first). Excludes password hash.
 export const getUsers = async (req, res, next) => {
   try {
     const users = await User.find().select("-password").sort("-createdAt");
@@ -10,6 +14,8 @@ export const getUsers = async (req, res, next) => {
   }
 };
 
+// GET /api/users/:id
+// Returns a single user by id, sans password hash.
 export const getUser = async (req, res, next) => {
   try {
     const user = await User.findById(req.params.id).select("-password");
@@ -47,6 +53,11 @@ export const createUser = async (req, res, next) => {
   }
 };
 
+// PATCH /api/users/:id
+// Partial update of name/email/phone/role/assignedArea/isActive. When a
+// password is included it is re-hashed by the model pre-save hook on save().
+// This is why save() is used instead of findByIdAndUpdate — passthrough
+// updates bypass the pre-save hasher and would store plaintext passwords.
 export const updateUser = async (req, res, next) => {
   try {
     const user = await User.findById(req.params.id);

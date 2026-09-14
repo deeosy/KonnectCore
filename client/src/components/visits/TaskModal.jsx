@@ -27,6 +27,8 @@ export default function TaskModal({ open, onClose, onSaved }) {
   const [saving, setSaving] = useState(false)
   const searchTimer = useRef(null)
 
+  // Reset the form and load the assignable field officers (active users with
+  // the fieldOfficer role only) every time the modal opens.
   useEffect(() => {
     if (!open) return
     setForm({

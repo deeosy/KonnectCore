@@ -1,3 +1,8 @@
+// AuditLogsPage.jsx - Append-only audit trail viewer (admin role).
+// Calls GET /audit-logs with action/resource/user/from/to filters and pagination (limit=15).
+// Also exports raw CSV via /api/audit-logs?format=csv&limit=1000 (blob download).
+// The trail is immutable; no edit/delete operations are offered.
+
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import {
@@ -17,6 +22,7 @@ import DataTable from '../components/ui/DataTable'
 import api from '../services/api'
 import { formatDateTime } from '../utils/format'
 
+// ACTIONS - filter options built from the known audit action keys.
 const ACTIONS = [
   'create',
   'update',
@@ -32,6 +38,7 @@ const ACTIONS = [
   'register',
 ].map((a) => ({ value: a, label: a.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()) }))
 
+// RESOURCES - filter options built from the audited resource types.
 const RESOURCES = [
   'member',
   'group',
@@ -48,6 +55,7 @@ const RESOURCES = [
   'auth',
 ].map((r) => ({ value: r, label: r.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()) }))
 
+// columns - DataTable column defs; user/action/resource/success are rendered with formatting.
 const columns = [
   {
     header: 'Date / Time',
@@ -98,6 +106,7 @@ const columns = [
   },
 ]
 
+// AuditLogsPage - main page; fetches paginated logs and owns filter/export state.
 export default function AuditLogsPage() {
   const [filters, setFilters] = useState({ action: '', resource: '', user: '', from: '', to: '' })
   const [logs, setLogs] = useState(null)
@@ -108,6 +117,7 @@ export default function AuditLogsPage() {
   const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
+    // `stale` flag drops responses from superseded requests when filters/page change mid-flight.
     let stale = false
     const params = new URLSearchParams({ page: String(page), limit: '15' })
     Object.entries(filters).forEach(([k, v]) => v && params.set(k, v))

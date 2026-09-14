@@ -1,6 +1,11 @@
+// Expense controller. Simple CRUD for cooperative expenses with
+// category and date-range filtering.
 import Expense from '../models/Expense.js'
 import { ApiError } from '../middleware/error.middleware.js'
 
+// GET /api/expenses
+// Lists expenses with optional category and date-range filters. Sums the
+// amounts in memory (no aggregation) and returns a running total.
 export const getExpenses = async (req, res, next) => {
   try {
     const { category, from, to } = req.query
@@ -24,6 +29,8 @@ export const getExpenses = async (req, res, next) => {
   }
 }
 
+// POST /api/expenses
+// Records an expense. createdBy is pinned to the acting user.
 export const createExpense = async (req, res, next) => {
   try {
     const expense = await Expense.create({
@@ -36,6 +43,8 @@ export const createExpense = async (req, res, next) => {
   }
 }
 
+// PATCH /api/expenses/:id
+// Partial update of an expense document.
 export const updateExpense = async (req, res, next) => {
   try {
     const expense = await Expense.findByIdAndUpdate(req.params.id, req.body, {
@@ -49,6 +58,8 @@ export const updateExpense = async (req, res, next) => {
   }
 }
 
+// DELETE /api/expenses/:id
+// Hard-deletes an expense record.
 export const deleteExpense = async (req, res, next) => {
   try {
     const expense = await Expense.findByIdAndDelete(req.params.id)

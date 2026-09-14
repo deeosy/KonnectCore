@@ -1,3 +1,10 @@
+// Central error-handling middleware. notFound catches unmatched routes and
+// forwards a 404-style error; errorHandler converts any error (application,
+// Mongoose, or unexpected) into a consistent JSON response. ApiError is the
+// application-level error class used across controllers and middleware.
+
+// Stub for Express's 404 handler: marks a route as not found and delegates to
+// errorHandler, which chooses the status code.
 export const notFound = (req, res, next) => {
   const error = new Error(`Not found - ${req.originalUrl}`);
   res.status(404);
@@ -45,6 +52,8 @@ export const errorHandler = (err, req, res, next) => {
   });
 };
 
+// Strongly-typed HTTP error for app code: setting err.statusCode lets any
+// thrown error carry an explicit HTTP status that errorHandler will honor.
 export class ApiError extends Error {
   constructor(statusCode, message) {
     super(message);

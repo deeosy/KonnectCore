@@ -1,3 +1,6 @@
+// One-shot database seeder. Creates a default admin user, sample
+// organisation, and merges the reference crop catalog. Safe to re-run —
+// existing records are never overwritten.
 import mongoose from 'mongoose'
 import dotenv from 'dotenv'
 import User from './models/User.js'
@@ -62,11 +65,55 @@ async function seed() {
     }
 
     console.log('Seed complete. Login with admin@konnectcore.com / admin123')
+
+    // Optional second tenant for testing multi-org isolation. Creates a
+    // separate organisation + manager so cross-tenant checks have a user to
+    // log in as. Opt-in via SEED_TEST_ORG=1; safe to re-run.
+    if (process.env.SEED_TEST_ORG === '1') {
+      await seedTestOrg()
+    }
   } catch (error) {
     console.error('Seed error:', error)
   } finally {
     await mongoose.disconnect()
     process.exit(0)
+  }
+}
+
+async function seedTestOrg() {
+  let org = await Organisation.findOne({
+    $or: [{ code: 'KC-TEST' }, { name: 'Test Cooperative' }],
+  })
+  if (!org) {
+    org = await Organisation.create({
+      name: 'Test Cooperative',
+      code: 'KC-TEST',
+      location: 'Tema',
+      region: 'Greater Accra',
+      settings: {
+        currency: 'GHS',
+        qualityGrades: ['Premium', 'Standard'],
+      },
+    })
+    console.log(`Created test organisation: ${org.name}`)
+  }
+
+  const email = 'test.manager@konnectcore.com'
+  let user = await User.findOne({ email })
+  if (!user) {
+    user = await User.create({
+      name: 'Test Manager',
+      email,
+      password: 'password123',
+      role: 'manager',
+      phone: '0555555555',
+      organisationId: org._id,
+    })
+    console.log(`Created test manager: ${email}`)
+  } else if (!user.organisationId) {
+    user.organisationId = org._id
+    await user.save()
+    console.log(`Assigned test manager to ${org.name}`)
   }
 }
 

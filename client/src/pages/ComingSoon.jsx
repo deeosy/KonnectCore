@@ -1,6 +1,11 @@
+// ComingSoon.jsx - Placeholder page for modules not yet built.
+// Renders a dashed-border card with a "Coming soon" message.
+// Accepts optional title and subtitle props to customize the header.
+
 import { Construction } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader'
 
+// ComingSoon - static placeholder; no API calls, no interactivity.
 export default function ComingSoon({ title, subtitle }) {
   return (
     <div>

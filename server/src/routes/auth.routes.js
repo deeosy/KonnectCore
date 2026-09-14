@@ -1,3 +1,8 @@
+// Auth routes — mount path: /api/auth
+// POST /register   - public, create a new user account
+// POST /login      - public, authenticate and receive a JWT
+// GET  /me          - protected, return the current user's profile
+
 import { Router } from 'express'
 import { body } from 'express-validator'
 import { register, login, getMe } from '../controllers/auth.controller.js'
@@ -6,6 +11,7 @@ import { validate } from '../middleware/validate.middleware.js'
 
 const router = Router()
 
+// POST /register — create a new user account; validates name, email, password
 router.post(
   '/register',
   [
@@ -17,6 +23,7 @@ router.post(
   register
 )
 
+// POST /login — authenticate with email/password, returns JWT
 router.post(
   '/login',
   [
@@ -27,6 +34,7 @@ router.post(
   login
 )
 
+// GET /me — returns the authenticated user's profile (requires valid JWT)
 router.get('/me', protect, getMe)
 
 export default router

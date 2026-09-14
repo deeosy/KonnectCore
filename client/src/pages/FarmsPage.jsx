@@ -1,3 +1,8 @@
+// FarmsPage.jsx - Farms & Crops management with a Farms/Crop Catalog tab switch.
+// Farms tab: GET /farms (page, limit=20, search/status/crop/location filters) and GET /farms/:id
+//   (drawer detail). Crops tab: GET /crops, POST/PUT /crops, DELETE /crops/:id.
+// Farm profiles themselves are created from the member detail page; this page is read + crop-CRUD.
+
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -46,9 +51,11 @@ function formatDateToInput(date) {
   if (!date) return ''
   const d = new Date(date)
   if (Number.isNaN(d.getTime())) return ''
+  // toISOString is UTC-based, so YYYY-MM-DD output is only safe for local-midnight values.
   return d.toISOString().slice(0, 10)
 }
 
+// useDebounce - delays reflecting a changing value (e.g. search text) by 300ms.
 function useDebounce(value, delay = 300) {
   const [debounced, setDebounced] = useState(value)
   useEffect(() => {
@@ -58,6 +65,7 @@ function useDebounce(value, delay = 300) {
   return debounced
 }
 
+// FarmsPage - root component; routes between the FarmsTab/CropsTab and hosts the farm drawer.
 export default function FarmsPage() {
   const navigate = useNavigate()
   const [tab, setTab] = useState('farms')
@@ -171,6 +179,7 @@ export default function FarmsPage() {
   )
 }
 
+// FarmsTab - paginated, filterable farm list table.
 function FarmsTab({ farms, total, totalPages, page, setPage, loading, filters, onFilter, onOpen }) {
   return (
     <div>
@@ -282,6 +291,7 @@ function FarmsTab({ farms, total, totalPages, page, setPage, loading, filters, o
   )
 }
 
+// FarmDrawer - slide-over detail panel for one farm with collapsible crop cards.
 function FarmDrawer({ farm, onClose, onMember }) {
   const [expandedCrop, setExpandedCrop] = useState(null)
   const member = farm.memberId || {}
@@ -379,6 +389,7 @@ function FarmDrawer({ farm, onClose, onMember }) {
   )
 }
 
+// CropsTab - crop catalog table with add/edit/delete crop modals.
 function CropsTab({ crops, onChanged }) {
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState(null)
@@ -440,6 +451,7 @@ function CropsTab({ crops, onChanged }) {
   )
 }
 
+// CropFormModal - create/edit a crop catalog entry (POST/PUT /crops); shared form.
 function CropFormModal({ open, crop, onClose, onSaved }) {
   const [form, setForm] = useState({ name: '', category: 'other', unit: 'kg', isActive: true })
   const [saving, setSaving] = useState(false)
@@ -517,6 +529,7 @@ function CropFormModal({ open, crop, onClose, onSaved }) {
   )
 }
 
+// DeleteCropModal - confirm-and-delete dialog for a catalog crop.
 function DeleteCropModal({ crop, onClose, onDeleted }) {
   const [saving, setSaving] = useState(false)
 

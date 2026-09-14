@@ -1,3 +1,8 @@
+/*
+ * Button - Reusable animated button with multiple variants and sizes.
+ * Props: variant ('primary'|'secondary'|'outline'|'outline-primary'|'outline-danger'|'danger'|'ghost'|'ghost-primary'),
+ *        size ('sm'|'md'|'lg'|'icon'|'icon-sm'), loading (shows spinner), disabled.
+ */
 import { Loader2 } from 'lucide-react'
 import { motion } from 'framer-motion'
 
@@ -28,6 +33,7 @@ const sizes = {
   'icon-sm': 'h-8 w-8 rounded-lg',
 }
 
+// Animated button component using framer-motion for hover/tap spring effects.
 export default function Button({
   children,
   variant = 'primary',

@@ -1,3 +1,6 @@
+// Group hierarchy controller. Manages the organisational tree (organisation >
+// region > district > group > community) with parent-type validation,
+// tree building, and bulk member assign/remove operations.
 import Group from "../models/Group.js";
 import Member from "../models/Member.js";
 import { ApiError } from "../middleware/error.middleware.js";
@@ -85,6 +88,10 @@ const buildTree = (groups, members) => {
   return sortNodes(roots);
 };
 
+// GET /api/groups/tree
+// Returns the full hierarchy as a nested tree. Builds a flat list of groups
+// plus member counts, then links each node under its parent via parentId
+// (recursive nesting) rather than a database tree query.
 export const getGroupTree = async (req, res, next) => {
   try {
     const groups = await Group.find()
@@ -92,7 +99,7 @@ export const getGroupTree = async (req, res, next) => {
       .sort("name")
       .lean();
 
-    const members = await Member.find()
+    const members = await Member.find({ deletedAt: null })
       .select("groupId")
       .lean();
 
@@ -104,6 +111,10 @@ export const getGroupTree = async (req, res, next) => {
   }
 };
 
+// GET /api/groups
+// Flat listing of all groups. With ?hierarchy=true each group gains a
+// memberCount; memberCount requires a per-group query, so the flat (non-
+// hierarchy) path avoids that cost entirely.
 export const getGroups = async (req, res, next) => {
   try {
     const { hierarchy } = req.query;
@@ -112,10 +123,12 @@ export const getGroups = async (req, res, next) => {
       .sort("name");
 
     if (hierarchy === "true") {
+      // One extra countDocuments per group, run concurrently — mirrors
+      // buildTree's approach but only for the flat response shape.
       const withCounts = await Promise.all(
         groups.map(async (g) => ({
           ...g.toObject(),
-          memberCount: await Member.countDocuments({ groupId: g._id }),
+          memberCount: await Member.countDocuments({ groupId: g._id, deletedAt: null }),
         })),
       );
       return res.json({
@@ -131,6 +144,8 @@ export const getGroups = async (req, res, next) => {
   }
 };
 
+// GET /api/groups/:id
+// Fetch a single group with direct members and child groups attached.
 export const getGroup = async (req, res, next) => {
   try {
     const group = await Group.findById(req.params.id).populate(
@@ -139,8 +154,8 @@ export const getGroup = async (req, res, next) => {
     );
     if (!group) throw new ApiError(404, "Group not found");
 
-    const members = await Member.find({ groupId: group._id })
-      .select("firstName lastName phone membershipNumber status photo")
+const members = await Member.find({ groupId: group._id, deletedAt: null })
+      .select("firstName lastName phone membershipNumber status location mainCrops photo")
       .populate("assignedOfficerId", "name");
 
     const children = await Group.find({ parentId: group._id }).select(
@@ -161,6 +176,9 @@ export const getGroup = async (req, res, next) => {
   }
 };
 
+// POST /api/groups
+// Creates a group. Validates the requested parent type before insert so an
+// invalid nesting (e.g. an organisation under a district) is rejected.
 export const createGroup = async (req, res, next) => {
   try {
     await assertValidParent(req.body.type, req.body.parentId);
@@ -174,6 +192,9 @@ export const createGroup = async (req, res, next) => {
   }
 };
 
+// PUT /api/groups/:id
+// Updates a group's fields. If the type or parentId changes, the new
+// parent/type combination is re-validated (ignoring self-references).
 export const updateGroup = async (req, res, next) => {
   try {
     const existing = await Group.findById(req.params.id);
@@ -211,6 +232,9 @@ export const deleteGroup = async (req, res, next) => {
   }
 };
 
+// POST /api/groups/:groupId/members
+// Bulk-assigns members to a group via a single $in updateMany — any listed
+// member's existing groupId is overwritten. Returns the modified count.
 export const assignMembers = async (req, res, next) => {
   try {
     const { groupId } = req.params;
@@ -238,6 +262,9 @@ export const assignMembers = async (req, res, next) => {
   }
 };
 
+// DELETE /api/groups/:groupId/members
+// Bulk-removes members from a group. Unlike assignMembers, the filter scopes
+// to members currently in that group so ids from other groups are untouched.
 export const removeMembers = async (req, res, next) => {
   try {
     const { groupId } = req.params;
@@ -265,12 +292,18 @@ export const removeMembers = async (req, res, next) => {
   }
 };
 
+// GET /api/groups/unassigned
+// Lists members with no group, optionally filtered by an $or search. Note the
+// filter juggling: the base $or (no group) is wrapped inside $and when a
+// search is present so both constraints apply.
 export const getUnassignedMembers = async (req, res, next) => {
   try {
     const { search } = req.query;
     const filter = {
       $or: [{ groupId: { $exists: false } }, { groupId: null }],
     };
+    // Deleted members never appear in assign/unassigned pickers.
+    filter.deletedAt = null;
     if (search) {
       filter.$and = [
         filter.$or,
@@ -298,9 +331,11 @@ export const getUnassignedMembers = async (req, res, next) => {
   }
 };
 
+// GET /api/groups/:groupId/members
+// Returns a compact member list for a specific group (id fields only).
 export const getGroupMembers = async (req, res, next) => {
   try {
-    const members = await Member.find({ groupId: req.params.groupId }).select(
+    const members = await Member.find({ groupId: req.params.groupId, deletedAt: null }).select(
       "firstName lastName phone membershipNumber status photo mainCrops",
     );
     res.json({ success: true, count: members.length, data: members });

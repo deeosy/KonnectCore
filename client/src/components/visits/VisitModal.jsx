@@ -77,6 +77,8 @@ export default function VisitModal({ open, onClose, onSaved, presetMember }) {
     }, 350)
   }
 
+  // Capture the officer's current position via the browser geolocation API,
+  // rounding to 6 decimals for accuracy, with a 10s high-accuracy timeout.
   const locate = () => {
     if (!navigator.geolocation) {
       toast.error('Geolocation is not available in this browser')
@@ -119,6 +121,8 @@ export default function VisitModal({ open, onClose, onSaved, presetMember }) {
       if (form.notes) fd.append('notes', form.notes)
       if (form.gpsLat) fd.append('gpsLat', form.gpsLat)
       if (form.gpsLng) fd.append('gpsLng', form.gpsLng)
+      // Attach any selected photos to the visit (capped at 5 per upload), sent as
+  // multipart form-data alongside the text fields.
       photos.forEach((p) => fd.append('photos', p))
       await api.post('/visits', fd, {
         headers: { 'Content-Type': 'multipart/form-data' },

@@ -1,5 +1,12 @@
+// FarmProfile model — detailed farming record for a member. Contains an
+// embedded array of crop plantings with lifecycle status (planted, growing,
+// harvested, failed). Used by the farm profile controller for season tracking
+// and yield analysis.
 import mongoose from 'mongoose'
+import tenantScope from './plugins/tenantScope.js'
 
+// Embedded crop planting record within a farm profile. Tracks a single crop
+// from planting through expected and actual harvest.
 const cropSchema = new mongoose.Schema(
   {
     cropName: {
@@ -23,6 +30,7 @@ const cropSchema = new mongoose.Schema(
     expectedHarvestDate: {
       type: Date,
     },
+    // Crop lifecycle: planted -> growing -> harvested | failed.
     status: {
       type: String,
       enum: ['planted', 'growing', 'harvested', 'failed'],
@@ -44,14 +52,22 @@ const cropSchema = new mongoose.Schema(
 
 const farmProfileSchema = new mongoose.Schema(
   {
+    // -- Tenant ownership --
+    organisationId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Organisation',
+    },
+    // -- Reference to the member who owns this farm --
     memberId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Member',
       required: [true, 'Member is required'],
     },
+    // -- Farm-level details --
     farmSize: {
       type: Number,
     },
+    // -- Location / GPS --
     location: {
       type: String,
       trim: true,
@@ -66,6 +82,7 @@ const farmProfileSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    // -- Embedded crop plantings --
     crops: {
       type: [cropSchema],
       default: [],
@@ -79,6 +96,9 @@ const farmProfileSchema = new mongoose.Schema(
     timestamps: true,
   }
 )
+
+// Tenant isolation (see plugin comment for details).
+farmProfileSchema.plugin(tenantScope)
 
 const FarmProfile = mongoose.model('FarmProfile', farmProfileSchema)
 

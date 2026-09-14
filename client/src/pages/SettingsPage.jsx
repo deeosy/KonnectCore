@@ -1,3 +1,9 @@
+// SettingsPage.jsx - Organisation profile and system configuration (admin role).
+// Calls GET /organisations/:id and GET /organisations/settings on load;
+// PUT /organisations/:id saves the profile, PUT /organisations/settings saves the config
+// (currency, default crop prices, quality grades, seasons, deduction rules).
+// Unset rows are stripped before saving; price/value fields are numeric-converted.
+
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { Save, Trash2, Plus, Settings as SettingsIcon, Building2, Coins } from 'lucide-react'
@@ -9,6 +15,7 @@ import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
 import { CROPS } from '../utils/constants'
 
+// emptyProfile - baseline org profile shape for the form.
 const emptyProfile = {
   name: '',
   code: '',
@@ -20,6 +27,7 @@ const emptyProfile = {
   contactEmail: '',
 }
 
+// SettingsPage - main page; loads org + settings in parallel and provides save handlers.
 export default function SettingsPage() {
   const { user } = useAuth()
   const orgId = user?.organisationId
@@ -34,6 +42,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState('')
 
   useEffect(() => {
+    // `active` guards against setting state after unmount; skip entirely without an org.
     let active = true
     if (!orgId) return undefined
     Promise.all([
@@ -89,6 +98,7 @@ export default function SettingsPage() {
   const saveSettings = async () => {
     setSaving('settings')
     try {
+      // Rebuild the object maps from editor rows, dropping any empty/blank entries.
       const defaultCropPrices = Object.fromEntries(
         prices
           .filter((p) => p.price !== '' && p.price !== null)
@@ -256,6 +266,8 @@ export default function SettingsPage() {
   )
 }
 
+// ChipEditor - reusable chip-list editor (grades, seasons): renders existing items as
+// removable chips and adds new ones from a draft input.
 function ChipEditor({ items, onChange, placeholder }) {
   const [draft, setDraft] = useState('')
   return (

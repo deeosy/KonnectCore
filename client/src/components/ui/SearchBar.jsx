@@ -1,3 +1,7 @@
+/*
+ * SearchBar - Controlled text input with a leading search icon.
+ * Props: value, onChange, placeholder (default 'Search...').
+ */
 import { Search } from 'lucide-react'
 
 export default function SearchBar({ value, onChange, placeholder = 'Search...', className = '' }) {

@@ -1,3 +1,9 @@
+// Dashboard.jsx - Main dashboard page shown after login.
+// Calls GET /dashboard/stats and GET /dashboard/activity on mount.
+// Displays stat cards (members, groups, collections, payments, outstanding dues),
+// chart visualizations, a recent activity feed, and quick-action navigation links.
+// The "Record Collection" action is shown for field officers; "Add Member" for admin/manager.
+
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
@@ -19,6 +25,7 @@ import StatCard from '../components/ui/StatCard'
 import DashboardCharts from '../components/dashboard/DashboardCharts'
 import { formatCurrency, formatNumber, formatDateTime } from '../utils/format'
 
+// activityStyles - maps activity types to colored dot classes for the activity feed.
 const activityStyles = {
   member: 'bg-primary',
   collection: 'bg-success',
@@ -47,6 +54,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    // Fetch stats and activity in parallel to minimize load time.
     const load = async () => {
       try {
         const [statsRes, activityRes] = await Promise.all([
@@ -79,6 +87,7 @@ export default function Dashboard() {
 
   return (
     <div>
+      {/* Greeting shows the user's first name, falling back to "there". */}
       <PageHeader
         title={`Welcome back, ${user?.name?.split(' ')[0] || 'there'}`}
         subtitle="Here's what's happening in your cooperative"

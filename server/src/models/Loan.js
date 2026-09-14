@@ -1,5 +1,11 @@
+// Loan model — tracks loans issued to members (input, cash, emergency,
+// equipment). Maintains a repayment schedule, balance, credit history, and
+// lifecycle status. Used by loan controllers and the overdue service.
 import mongoose from "mongoose";
+import tenantScope from "./plugins/tenantScope.js";
 
+// Individual repayment record embedded inside a loan. Supports auto-deduction
+// from collections as well as manual cash/mobile-money payments.
 const repaymentSchema = new mongoose.Schema(
   {
     amount: { type: Number, required: true },
@@ -9,13 +15,17 @@ const repaymentSchema = new mongoose.Schema(
       enum: ["deduction", "cash", "mobile_money", "bank_transfer", "other"],
       default: "deduction",
     },
+    // Link back to the collection that triggered an automatic deduction.
     collectionId: { type: mongoose.Schema.Types.ObjectId, ref: "Collection" },
+    // Link to the payment record when repayment was made externally.
     paymentId: { type: mongoose.Schema.Types.ObjectId, ref: "Payment" },
     recordedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   },
   { timestamps: true },
 );
 
+// Simple audit trail of credit-related events (approvals, disbursements,
+// repayments). Kept as a flat array rather than a separate collection.
 const creditHistorySchema = new mongoose.Schema(
   {
     event: { type: String },
@@ -27,15 +37,18 @@ const creditHistorySchema = new mongoose.Schema(
 
 const loanSchema = new mongoose.Schema(
   {
+    // -- Tenant ownership --
     organisationId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Organisation",
     },
+    // -- Reference to the borrower --
     memberId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Member",
       required: [true, "Member is required"],
     },
+    // -- Loan terms --
     type: {
       type: String,
       enum: ["input", "cash", "emergency", "equipment"],
@@ -49,6 +62,7 @@ const loanSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    // flat = simple interest on principal; reducing_balance = compound.
     interestType: {
       type: String,
       enum: ["flat", "reducing_balance"],
@@ -58,6 +72,7 @@ const loanSchema = new mongoose.Schema(
       type: Number,
       default: 3,
     },
+    // -- Repayment tracking --
     repaymentSchedule: {
       type: [repaymentSchema],
       default: [],
@@ -66,10 +81,12 @@ const loanSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    // Derived: max(0, amount - amountRepaid), set by pre-save hook.
     balance: {
       type: Number,
       default: 0,
     },
+    // -- Lifecycle: pending -> approved -> disbursed -> completed | overdue --
     status: {
       type: String,
       enum: [
@@ -82,6 +99,7 @@ const loanSchema = new mongoose.Schema(
       ],
       default: "pending",
     },
+    // -- Approval and disbursement timestamps --
     requestedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -103,6 +121,7 @@ const loanSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    // -- Credit scoring --
     creditScore: {
       type: Number,
       default: 0,
@@ -128,6 +147,9 @@ loanSchema.pre("save", function (next) {
   this.balance = Math.max(0, this.amount - this.amountRepaid);
   next();
 });
+
+// Tenant isolation (see plugin comment for details).
+loanSchema.plugin(tenantScope);
 
 const Loan = mongoose.model("Loan", loanSchema);
 

@@ -7,6 +7,7 @@ import Input from '../ui/Input'
 import Select from '../ui/Select'
 import { formatCurrency } from '../../utils/format'
 
+// Convert a date to the yyyy-mm-dd format expected by <input type="date">.
 const dateInputValue = (date) => {
   if (!date) return ''
   const d = new Date(date)
@@ -35,6 +36,7 @@ export default function RepaymentModal({ open, loan, onClose, onSaved }) {
   }, [open, loan])
 
   const amount = Number(form.amount) || 0
+  // Project the running total repaid once this payment is applied.
   const amountPaid = (loan?.amountRepaid || 0) + amount
 
   const submit = async () => {

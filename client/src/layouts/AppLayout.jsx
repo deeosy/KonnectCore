@@ -1,4 +1,7 @@
-import { useState } from 'react'
+// Top-level authenticated layout: collapsible sidebar, topbar with profile
+// dropdown and a global member-search popover, and an <Outlet /> for nested
+// route content.
+import { useState, useEffect } from 'react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { Menu, X, LogOut, ChevronDown, Bell, Search } from 'lucide-react'
 import logo from '../assets/images/preferedlogo2.png'
@@ -6,6 +9,19 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
 import { navSections } from '../config/navigation'
 import Avatar from '../components/ui/Avatar'
+import Input from '../components/ui/Input'
+import api from '../services/api'
+
+// Debounce a value by a delay (ms) so keystrokes don't fire one API request
+// per character — the topbar global search waits 350ms of quiet typing.
+function useDebouncedValue(value, delay) {
+  const [debounced, setDebounced] = useState(value)
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delay)
+    return () => clearTimeout(timer)
+  }, [value, delay])
+  return debounced
+}
 
 export default function AppLayout() {
   const { user, logout, hasRole } = useAuth()
@@ -13,7 +29,49 @@ export default function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
+  // Global search popover state: query, live results, and loading flag.
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState([])
+  const [searching, setSearching] = useState(false)
+  // Notifications dropdown (placeholder — there is no notification engine yet).
+  const [notificationOpen, setNotificationOpen] = useState(false)
+  const debouncedQuery = useDebouncedValue(searchQuery.trim(), 350)
 
+  // Live member search: fetch up to 5 matches for the debounced query. The
+  // `active` flag discards stale responses if the user keeps typing. When the
+  // query is empty the effect does nothing — the render short-circuits on
+  // searchQuery, so no state needs clearing here.
+  useEffect(() => {
+    if (!debouncedQuery) return
+    let active = true
+    setSearching(true)
+    api
+      .get(`/members?search=${encodeURIComponent(debouncedQuery)}&limit=5`)
+      .then(({ data }) => {
+        if (active) setSearchResults(data.data || [])
+      })
+      .catch(() => {
+        if (active) setSearchResults([])
+      })
+      .finally(() => {
+        if (active) setSearching(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [debouncedQuery])
+
+  // Navigate to a matched member and reset the popover so it starts fresh next time.
+  const goToMember = (id) => {
+    setSearchOpen(false)
+    setSearchQuery('')
+    setSearchResults([])
+    navigate(`/members/${id}`)
+  }
+
+  // Filter the nav sections by the user's role, dropping any section whose
+  // items are all hidden so empty groups never render.
   const visibleSections = navSections
     .map((section) => ({
       ...section,
@@ -115,7 +173,8 @@ export default function AppLayout() {
         {sidebarContent}
       </motion.aside>
 
-      {/* Mobile sidebar overlay */}
+      {/* Mobile sidebar overlay: only mounted while open so the slide-in
+          animation plays on toggling, and clicking the backdrop closes it */}
       <AnimatePresence>
         {sidebarOpen && (
           <div className="fixed inset-0 z-40 lg:hidden">
@@ -164,18 +223,122 @@ export default function AppLayout() {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Search */}
-            <button className="hidden rounded-xl p-2.5 text-muted transition-colors hover:bg-subtle hover:text-dark md:flex">
-              <Search className="h-4.5 w-4.5" />
-            </button>
+            {/* Global member search: opens a dropdown that live-queries
+                /members as the user types and jumps to a profile on click */}
+            <div className="relative hidden md:block">
+              <button
+                onClick={() => setSearchOpen((v) => !v)}
+                className="rounded-xl p-2.5 text-muted transition-colors hover:bg-subtle hover:text-dark"
+                aria-label="Search members"
+              >
+                <Search className="h-4.5 w-4.5" />
+              </button>
 
-            {/* Notifications */}
-            <button className="relative rounded-xl p-2.5 text-muted transition-colors hover:bg-subtle hover:text-dark">
-              <Bell className="h-4.5 w-4.5" />
-              <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-primary" />
-            </button>
+              <AnimatePresence>
+                {searchOpen && (
+                  <>
+                    {/* Invisible backdrop closes the popover on outside click */}
+                    <div
+                      className="fixed inset-0 z-10"
+                      onClick={() => setSearchOpen(false)}
+                    />
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 top-full z-20 mt-2 w-80 overflow-hidden rounded-2xl border border-border bg-surface shadow-xl"
+                    >
+                      <div className="border-b border-border-light p-3">
+                        <Input
+                          autoFocus
+                          icon={Search}
+                          placeholder="Search members..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                      </div>
+                      <div className="max-h-80 overflow-y-auto p-2">
+                        {searchQuery.trim() === '' ? (
+                          <p className="px-3 py-2 text-xs text-muted">
+                            Search members by name, phone, or membership ID.
+                          </p>
+                        ) : searching ? (
+                          <p className="px-3 py-2 text-xs text-muted">Searching…</p>
+                        ) : searchResults.length === 0 ? (
+                          <p className="px-3 py-2 text-xs text-muted">
+                            No members match “{searchQuery.trim()}”.
+                          </p>
+                        ) : (
+                          searchResults.map((m) => (
+                            <button
+                              key={m._id}
+                              onClick={() => goToMember(m._id)}
+                              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-subtle"
+                            >
+                              <Avatar
+                                name={`${m.firstName} ${m.lastName}`}
+                                src={m.photo}
+                                size="sm"
+                              />
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate text-sm font-semibold text-dark">
+                                  {m.firstName} {m.lastName}
+                                </span>
+                                <span className="block truncate text-xs text-muted">
+                                  {m.membershipNumber || m.phone || m.location}
+                                </span>
+                              </span>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
 
-            {/* Profile */}
+            {/* Notifications: placeholder panel. The red unread dot was removed
+                because no notification engine exists yet — a fake unread badge
+                would be misleading until Phase 16 (communication) arrives */}
+            <div className="relative">
+              <button
+                onClick={() => setNotificationOpen((v) => !v)}
+                className="rounded-xl p-2.5 text-muted transition-colors hover:bg-subtle hover:text-dark"
+                aria-label="Notifications"
+              >
+                <Bell className="h-4.5 w-4.5" />
+              </button>
+
+              <AnimatePresence>
+                {notificationOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-10"
+                      onClick={() => setNotificationOpen(false)}
+                    />
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 top-full z-20 mt-2 w-72 overflow-hidden rounded-2xl border border-border bg-surface shadow-xl"
+                    >
+                      <p className="border-b border-border-light px-4 py-3 text-sm font-bold text-dark">
+                        Notifications
+                      </p>
+                      <p className="px-4 py-6 text-center text-xs text-muted">
+                        No new notifications yet.
+                      </p>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Profile dropdown with user info and logout; toggled by the
+                chevron button below and closed via the invisible backdrop */}
             <div className="relative">
               <button
                 onClick={() => setProfileOpen((v) => !v)}

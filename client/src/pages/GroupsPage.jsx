@@ -1,3 +1,9 @@
+// GroupsPage.jsx - Cooperative hierarchy management (organisation > region > district
+// > group > community) as a collapsible tree.
+// Calls GET /groups/tree, GET /groups/:id, POST /groups, PUT /groups/:id,
+// DELETE /groups/:id, GET /groups/unassigned-members, POST /groups/:id/members,
+// DELETE /groups/:id/members, and GET /users (for the leader dropdown).
+
 import { useEffect, useState, useCallback } from 'react'
 import {
   Plus,
@@ -30,6 +36,7 @@ import EmptyState from '../components/ui/EmptyState'
 import StatCard from '../components/ui/StatCard'
 import SearchBar from '../components/ui/SearchBar'
 
+// GROUP_TYPES - the possible node types in the hierarchy.
 const GROUP_TYPES = [
   { value: 'organisation', label: 'Organisation' },
   { value: 'region', label: 'Region' },
@@ -48,6 +55,7 @@ const ALLOWED_PARENTS = {
   community: ['region', 'district', 'group', 'community'],
 }
 
+// TYPE_META - icon + styling per node type, used everywhere a node is rendered.
 const TYPE_META = {
   organisation: { icon: Building2, chip: 'bg-secondary-50 text-secondary-700', dot: 'bg-secondary' },
   region: { icon: Map, chip: 'bg-primary-50 text-primary-700', dot: 'bg-primary' },
@@ -56,6 +64,8 @@ const TYPE_META = {
   community: { icon: Home, chip: 'bg-warning-50 text-warning-700', dot: 'bg-warning-500' },
 }
 
+// GroupsPage - renders the hierarchy tree, stat cards, detail panel, and all modals
+// for create/edit/assign/remove/delete operations. Root nodes default to expanded.
 export default function GroupsPage() {
   const [tree, setTree] = useState([])
   const [loading, setLoading] = useState(true)
@@ -76,6 +86,7 @@ export default function GroupsPage() {
     try {
       const { data } = await api.get('/groups/tree')
       setTree(data.data)
+      // Expand every root node by default so the structure is visible immediately.
       const initial = {}
       data.data.forEach((root) => { initial[root._id] = true })
       setExpanded(initial)
@@ -111,8 +122,10 @@ export default function GroupsPage() {
     fetch()
   }, [selected])
 
+  // countAssigned - recursively sums memberCount across all nodes (includes children).
   const countAssigned = (nodes) =>
     nodes.reduce((sum, n) => sum + (n.memberCount || 0) + countAssigned(n.children || []), 0)
+  // countType - recursively counts nodes of a given type.
   const countType = (nodes, type) =>
     nodes.reduce(
       (sum, n) => sum + (n.type === type ? 1 : 0) + countType(n.children || [], type),
@@ -300,6 +313,8 @@ export default function GroupsPage() {
 }
 
 // Recursive tree node row.
+// TreeNode - one row in the collapsible tree; indents by depth level, expands children,
+// and exposes add-child / select-on-click actions.
 function TreeNode({ node, level, expanded, toggle, isSelected, onSelect, onAddChild }) {
   const meta = TYPE_META[node.type] || TYPE_META.group
   const Icon = meta.icon
@@ -363,14 +378,18 @@ function TreeNode({ node, level, expanded, toggle, isSelected, onSelect, onAddCh
 
 // -- Helpers for the form modals -------------------------------------------
 
+// flattenTree - turns the nested tree into a flat list for parent/leader dropdown options.
 function flattenTree(nodes) {
   return nodes.flatMap((n) => [n, ...flattenTree(n.children || [])])
 }
 
+// childType - determines the default type for a node created under a given parent type.
 function childType(type) {
   return { organisation: 'region', region: 'district', district: 'group', group: 'community', community: 'community' }[type] || 'group'
 }
 
+// parentOptions - dropdown options for a node's parent, restricted to the types
+// ALLOWED_PARENTS permits for the current node type and excluding the node itself.
 function parentOptions(groups, type, ignoreId) {
   const allowed = ALLOWED_PARENTS[type] || []
   return groups
@@ -380,6 +399,7 @@ function parentOptions(groups, type, ignoreId) {
 
 // -- Create / Edit group modal (shared form) --------------------------------
 
+// GroupForm - shared create/edit form; POSTs or PUTs /groups depending on `editing`.
 function GroupForm({ defaults, groups, leaders, onSaved, onClose, editing }) {
   const [form, setForm] = useState(() => ({
     name: editing?.name || defaults?.name || '',
@@ -395,6 +415,7 @@ function GroupForm({ defaults, groups, leaders, onSaved, onClose, editing }) {
   const set = (key) => (e) => setForm((f) => {
     const next = { ...f, [key]: e.target.value }
     if (key === 'name') setNameError('')
+    // Changing the node type invalidates any selected parent, so clear it.
     if (key === 'type') next.parentId = ''
     return next
   })
@@ -453,6 +474,7 @@ function GroupForm({ defaults, groups, leaders, onSaved, onClose, editing }) {
   )
 }
 
+// GroupFormModal - Modal wrapper used for create mode (with optional defaults).
 function GroupFormModal({ open, defaults, groups, leaders, onClose, onSaved }) {
   return (
     <Modal open={open} onClose={onClose} title="New Group">
@@ -461,6 +483,7 @@ function GroupFormModal({ open, defaults, groups, leaders, onClose, onSaved }) {
   )
 }
 
+// EditGroupModal - Modal wrapper for edit mode; renders GroupForm with `editing` set.
 function EditGroupModal({ group, groups, leaders, onClose, onSaved }) {
   return (
     <Modal open={!!group} onClose={onClose} title={`Edit ${group?.name || ''}`}>
@@ -471,6 +494,7 @@ function EditGroupModal({ group, groups, leaders, onClose, onSaved }) {
 
 // -- Assign members modal -----------------------------------------------
 
+// AssignMembersModal - searchable list of unassigned members, POSTed to /groups/:id/members.
 function AssignMembersModal({ open, group, onClose, onAssigned }) {
   const [unassigned, setUnassigned] = useState([])
   const [search, setSearch] = useState('')
@@ -586,6 +610,7 @@ function AssignMembersModal({ open, group, onClose, onAssigned }) {
 
 // -- Remove members modal ------------------------------------------------
 
+// RemoveMembersModal - multi-select removal of members from a group (DELETE /groups/:id/members).
 function RemoveMembersModal({ open, group, onClose, onRemoved }) {
   const [selected, setSelected] = useState({})
   const [saving, setSaving] = useState(false)
@@ -660,6 +685,7 @@ function RemoveMembersModal({ open, group, onClose, onRemoved }) {
 
 // -- Delete confirm modal -------------------------------------------------
 
+// DeleteGroupModal - confirm-and-delete dialog (DELETE /groups/:id).
 function DeleteGroupModal({ open, group, onClose, onDeleted }) {
   const [saving, setSaving] = useState(false)
 
@@ -699,6 +725,7 @@ function DeleteGroupModal({ open, group, onClose, onDeleted }) {
 
 // -- Group detail panel ---------------------------------------------------
 
+// GroupDetail - right-panel detail view: header, members list, child nodes, and metadata.
 function GroupDetail({ group, onEdit, onAssign, onRemove, onDelete, onMemberRemoved, onOpenChild }) {
   const meta = TYPE_META[group.type] || TYPE_META.group
   const Icon = meta.icon

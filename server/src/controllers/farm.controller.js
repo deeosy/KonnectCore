@@ -1,7 +1,13 @@
+// Farm profile controller. Manages per-member farm data including nested
+// crop sub-documents. Farm-level member search is resolved via a Member
+// lookup before querying FarmProfile.
 import FarmProfile from '../models/FarmProfile.js'
 import Member from '../models/Member.js'
 import { ApiError } from '../middleware/error.middleware.js'
 
+// GET /api/farms
+// Paginated farm listing. The member lookup drives which members match the
+// group/search filter. crop/status match against the nested crops array.
 export const getFarms = async (req, res, next) => {
   try {
     const { search, crop, status, groupId, location } = req.query
@@ -11,6 +17,8 @@ export const getFarms = async (req, res, next) => {
     // Farms belong to members, so member-level filters (search text, group)
     // are resolved to a set of member ids before querying farm profiles.
     const memberFilter = {}
+    // Farms owned by soft-deleted members are not surfaced in the listing.
+    memberFilter.deletedAt = null
     if (groupId) {
       memberFilter.groupId = groupId
     }
@@ -65,6 +73,9 @@ export const getFarms = async (req, res, next) => {
   }
 }
 
+// GET /api/farms/:id
+// Fetches a single farm profile with the member and their group resolved
+// through a nested populate.
 export const getFarm = async (req, res, next) => {
   try {
     const farm = await FarmProfile.findById(req.params.id).populate({
@@ -79,6 +90,8 @@ export const getFarm = async (req, res, next) => {
   }
 }
 
+// GET /api/farms/member/:memberId
+// Returns the single farm profile for a given member (one farm per member).
 export const getFarmByMember = async (req, res, next) => {
   try {
     const farm = await FarmProfile.findOne({ memberId: req.params.memberId })
@@ -89,6 +102,9 @@ export const getFarmByMember = async (req, res, next) => {
   }
 }
 
+// POST /api/farms/member/:memberId
+// Creates a farm profile for the member identified in the URL. See the
+// inline note for why memberId is taken from params rather than the body.
 export const createFarm = async (req, res, next) => {
   try {
     // memberId comes from the URL (/farms/member/:memberId) and is merged in
@@ -104,6 +120,8 @@ export const createFarm = async (req, res, next) => {
   }
 }
 
+// PATCH /api/farms/:id
+// Partial update of a farm profile (including its nested crops array).
 export const updateFarm = async (req, res, next) => {
   try {
     const farm = await FarmProfile.findByIdAndUpdate(req.params.id, req.body, {
@@ -117,6 +135,8 @@ export const updateFarm = async (req, res, next) => {
   }
 }
 
+// DELETE /api/farms/:id
+// Hard-deletes a farm profile record.
 export const deleteFarm = async (req, res, next) => {
   try {
     const farm = await FarmProfile.findByIdAndDelete(req.params.id)
@@ -127,6 +147,9 @@ export const deleteFarm = async (req, res, next) => {
   }
 }
 
+// POST /api/farms/member/:memberId/crops
+// Adds a crop to the member's farm. If the member has no farm profile yet,
+// one is created on the fly seeded with this crop.
 export const addCrop = async (req, res, next) => {
   try {
     const farm = await FarmProfile.findOne({ memberId: req.params.memberId })
@@ -145,6 +168,9 @@ export const addCrop = async (req, res, next) => {
   }
 }
 
+// PATCH /api/farms/member/:memberId/crops/:cropId
+// Merges the request body onto an existing sub-document crop via Mongoose's
+// array .id() accessor to locate the specific crop.
 export const updateCrop = async (req, res, next) => {
   try {
     const farm = await FarmProfile.findOne({ memberId: req.params.memberId })
@@ -161,6 +187,8 @@ export const updateCrop = async (req, res, next) => {
   }
 }
 
+// DELETE /api/farms/member/:memberId/crops/:cropId
+// Removes a crop from the farm's crops array.
 export const deleteCrop = async (req, res, next) => {
   try {
     const farm = await FarmProfile.findOne({ memberId: req.params.memberId })

@@ -1,3 +1,10 @@
+/*
+ * Badge - Colored status pill that maps predefined status keys to Tailwind styles.
+ * Props: status (key into statusStyles, e.g. 'active', 'pending', 'paid'),
+ *        label (override text; defaults to status with underscores replaced by spaces).
+ */
+
+// Maps each known status to its background, text, and border colors
 const statusStyles = {
   active: 'bg-success-50 text-success-700 border-success-200',
   inactive: 'bg-subtle text-muted border-border',
@@ -17,7 +24,9 @@ const statusStyles = {
 }
 
 export default function Badge({ status, label, className = '' }) {
+  // Fall back to the neutral style when the status is unknown
   const style = statusStyles[status] || 'bg-subtle text-muted border-border'
+  // Default label is the status key with underscores replaced by spaces
   const text = label || (status ? status.replace(/_/g, ' ') : '')
 
   const capitalize = (s) => s.replace(/\b\w/g, (c) => c.toUpperCase())

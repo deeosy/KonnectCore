@@ -1,3 +1,5 @@
+// Shared enum-like option lists (value/label pairs) used across forms and
+// selects so vocabulary stays consistent between the UI and the API.
 export const MEMBER_STATUSES = [
   { value: 'active', label: 'Active' },
   { value: 'inactive', label: 'Inactive' },

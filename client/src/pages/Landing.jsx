@@ -1,3 +1,11 @@
+// Landing.jsx - Public marketing landing page for KonnectCore.
+// Single-page scroll layout with animated sections (framer-motion) and smooth scrolling (Lenis).
+// No API calls; all content is hardcoded marketing copy.
+// Sub-components: Navbar, Hero, Impact, Opportunity, Features, HowItWorks,
+// Platform, Testimonials, CtaBand, Footer -- all defined in this file.
+// Helper hooks: useCounter (animated number count-up), Reveal (scroll-triggered fade-in),
+// Kicker (section label with decorative line).
+
 import { useEffect, useRef, useState } from 'react'
 import { motion, useInView, useReducedMotion, useScroll, useTransform } from 'framer-motion'
 import Lenis from 'lenis'
@@ -42,8 +50,11 @@ const TESTIMONIALS = [
 ]
 
 const EASE = [0.22, 1, 0.36, 1]
+// viewOnce: framer-motion viewport config -- trigger once, 80px before element enters.
 const viewOnce = { once: true, margin: '-80px' }
 
+// useCounter - animates a number from 0 to target when `inView` is true.
+// Steps 80 times at ~16ms intervals for a smooth count-up effect.
 function useCounter(target, inView) {
   const [val, setVal] = useState(0)
   useEffect(() => {
@@ -64,6 +75,7 @@ function useCounter(target, inView) {
   return val
 }
 
+// Reveal - scroll-triggered fade-and-slide-up wrapper using framer-motion's whileInView.
 function Reveal({ children, delay = 0, y = 26, className = '' }) {
   return (
     <motion.div
@@ -78,6 +90,7 @@ function Reveal({ children, delay = 0, y = 26, className = '' }) {
   )
 }
 
+// Kicker - small uppercase section label with a decorative horizontal line.
 function Kicker({ children, light = false }) {
   return (
     <div className={`mb-6 flex items-center gap-3 ${light ? 'text-primary-400' : 'text-primary'}`}>
@@ -89,6 +102,9 @@ function Kicker({ children, light = false }) {
   )
 }
 
+// Navbar - fixed top navigation bar with scroll-aware background blur,
+// active-section highlighting, and a mobile hamburger menu.
+// scrollTo prop is called to smooth-scroll to page sections by element ID.
 function Navbar({ scrollTo }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
@@ -199,6 +215,8 @@ function Navbar({ scrollTo }) {
   )
 }
 
+// Hero - top hero section with parallax background image, animated headline words,
+// and floating stat cards. Uses useScroll + useTransform for parallax offsets.
 function Hero({ scrollTo }) {
   const { scrollY } = useScroll()
   const yBg = useTransform(scrollY, [0, 900], [0, 140])
@@ -328,6 +346,8 @@ function Hero({ scrollTo }) {
   )
 }
 
+// Impact - "By the numbers" section with four animated counters (members, groups, tonnes, loan book).
+// Uses useCounter hook to animate values when scrolled into view.
 function Impact() {
   const ref = useRef(null)
   const inView = useInView(ref, { once: true })
@@ -384,6 +404,8 @@ function Impact() {
   )
 }
 
+// Opportunity - "The paper gap" section explaining the problem KonnectCore solves.
+// Purely presentational, no state or API calls.
 function Opportunity() {
   return (
     <section id="why-us" className="relative scroll-mt-24 overflow-hidden bg-background py-24 sm:py-32">
@@ -480,6 +502,8 @@ function Opportunity() {
   )
 }
 
+// Features - "Everything in one field" section showing six product module cards.
+// Grid has a parallax scroll offset via useScroll + useTransform.
 function Features() {
   const sectionRef = useRef(null)
   const { scrollYProgress } = useScroll({ target: sectionRef, offset: ['start end', 'end start'] })
@@ -571,6 +595,7 @@ function Features() {
   )
 }
 
+// HowItWorks - three-step "From first register to final report" section.
 function HowItWorks() {
   return (
     <section id="collections" className="scroll-mt-24 border-y border-border bg-surface py-24 sm:py-32">
@@ -615,6 +640,7 @@ function HowItWorks() {
   )
 }
 
+// Platform - dashboard mockup section with animated bar chart and stat cards.
 function Platform() {
   const bars = [65, 78, 55, 90, 82, 95, 88]
   const stats = [
@@ -742,6 +768,7 @@ function Platform() {
   )
 }
 
+// Testimonials - customer quote cards section.
 function Testimonials() {
   const [featured, ...rest] = TESTIMONIALS
   const initials = (name) => name.split(' ').map((w) => w[0]).join('')
@@ -848,6 +875,7 @@ function Testimonials() {
   )
 }
 
+// CtaBand - full-width call-to-action banner at the bottom of the page.
 function CtaBand() {
   return (
     <section className="px-5 pb-24 sm:px-8 sm:pb-32">
@@ -896,6 +924,7 @@ function CtaBand() {
   )
 }
 
+// Footer - site footer with links, social icons, contact info, and copyright.
 function Footer() {
   const cols = [
     { title: 'Product', links: ['Members', 'Collections', 'Payments', 'Loans', 'Reports'] },
@@ -1009,12 +1038,15 @@ function Footer() {
   )
 }
 
+// Landing - default export; initializes Lenis smooth scroll (disabled when prefers-reduced-motion),
+// wires up a scrollTo helper, and renders the full page layout.
 export default function Landing() {
   const lenisRef = useRef(null)
   const reduceMotion = useReducedMotion()
   const { scrollYProgress } = useScroll()
 
   useEffect(() => {
+    // Skip smooth scrolling if the user prefers reduced motion.
     if (reduceMotion) return
     const lenis = new Lenis({ lerp: 0.1, duration: 2.5, smoothTouch: false })
     lenisRef.current = lenis
@@ -1031,6 +1063,8 @@ export default function Landing() {
     }
   }, [reduceMotion])
 
+  // scrollTo - smooth-scrolls to an element by ID using Lenis, with a -76px offset
+  // to account for the fixed navbar height. Falls back to native scrollIntoView.
   const scrollTo = (id) => {
     const target = id ? document.getElementById(id) : null
     if (!target) return

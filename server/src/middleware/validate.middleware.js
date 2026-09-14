@@ -1,6 +1,10 @@
 import { validationResult } from "express-validator";
 import { ApiError } from "./error.middleware.js";
 
+// Validation bridge for express-validator. Each route declares field rules
+// via body()/param()/query(); this middleware is mounted after them and
+// short-circuits to the error handler if any rule failed.
+
 // Runs after express-validator rules defined on a route. If any rule failed,
 // we shortcut to the error handler (via next) rather than proceeding to the
 // controller. All validation error messages are joined into a single string

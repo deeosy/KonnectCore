@@ -1,3 +1,8 @@
+// navigation.js - Sidebar navigation structure for AppLayout.
+// Defines grouped nav sections with role-based visibility.
+// Each item carries a lucide-react icon, route path, and a roles array that
+// controls which user roles see the link. allNavItems is a flat list for quick lookup.
+
 import {
   LayoutDashboard,
   Users,
@@ -59,4 +64,5 @@ export const navSections = [
   },
 ]
 
+// Flatten all sections into a single array for route-matching or breadcrumb use.
 export const allNavItems = navSections.flatMap((s) => s.items)

@@ -1,3 +1,7 @@
+/*
+ * ToastProvider - Global toast notification provider wrapping react-hot-toast.
+ * Place once at the app root. Configures position, duration, and theme styling.
+ */
 import { Toaster } from 'react-hot-toast'
 
 export default function ToastProvider() {

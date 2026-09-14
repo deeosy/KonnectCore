@@ -1,3 +1,8 @@
+/*
+ * DataTable - Simple table component with column config, row click support, and empty state.
+ * Props: columns (array of { header, accessor, render }), data (array of row objects),
+ *        emptyTitle, emptyDescription, onRowClick (callback receiving the clicked row).
+ */
 import { useMemo } from 'react'
 import EmptyState from './EmptyState'
 
@@ -44,7 +49,8 @@ export default function DataTable({
                 >
                   {columns.map((col, colIdx) => (
                     <td key={colIdx} className="whitespace-nowrap px-5 py-3.5 text-sm text-dark">
-                      {col.render ? col.render(row) : row[col.accessor]}
+                      {/* Use column's custom `render` function if provided, otherwise fall back to accessor key */}
+                    {col.render ? col.render(row) : row[col.accessor]}
                     </td>
                   ))}
                 </tr>

@@ -1,7 +1,13 @@
+// Audit log controller. Provides paginated, filterable access to the
+// audit trail with optional CSV export.
 import AuditLog from "../models/AuditLog.js";
 import User from "../models/User.js";
 import { sendCsv } from "../utils/export.js";
 
+// GET /api/audit-logs
+// Paginated audit trail with action/resource/date filters. A free-text
+// 'user' search is resolved to user ids first via a name/email regex across
+// the users collection. Supports ?format=csv export via the export utils.
 export const getAuditLogs = async (req, res, next) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
@@ -17,6 +23,8 @@ export const getAuditLogs = async (req, res, next) => {
       if (to) filter.createdAt.$lte = new Date(to);
     }
     if (user) {
+      // Free-text user search matches name OR email, collapsed to distinct
+      // ids so the audit filter can use an $in query.
       const matchUsers = await User.find({
         $or: [{ name: { $regex: user, $options: "i" } }, { email: { $regex: user, $options: "i" } }],
       }).distinct("_id");

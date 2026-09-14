@@ -1,3 +1,8 @@
+// FieldDashboard.jsx - Role-aware field ops page for field officers and leaders.
+// Officer view: GET /visits/me/members, GET /visits/me/tasks, GET /visits; updates task
+//   status via PUT /visits/tasks/:id. Leader view: GET /visits/performance?days=30 and GET /visits.
+// Hosts VisitModal (record visit), TaskModal (assign task), QuickRegisterModal (quick member).
+
 import { useEffect, useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -22,6 +27,7 @@ import TaskModal from '../components/visits/TaskModal'
 import QuickRegisterModal from '../components/members/QuickRegisterModal'
 import { formatDate } from '../utils/format'
 
+// FieldDashboard - the default export; branches data loading by isOfficer vs isLeader.
 export default function FieldDashboard() {
   const { user, hasRole } = useAuth()
   const isOfficer = user?.role === 'fieldOfficer'
@@ -71,12 +77,14 @@ export default function FieldDashboard() {
   const setTaskStatus = async (task, status) => {
     try {
       await api.put(`/visits/tasks/${task._id}`, { status })
+      // Optimistic local update so the UI reflects the new status without a refetch.
       setTasks((ts) => ts.map((t) => (t._id === task._id ? { ...t, status } : t)))
     } catch {
       // status unchanged on failure
     }
   }
 
+  // Derived counts for the officer stat cards: month visits, open and completed tasks.
   const startOfMonth = new Date()
   startOfMonth.setDate(1)
   const monthVisits = visits.filter((v) => new Date(v.date) >= startOfMonth).length

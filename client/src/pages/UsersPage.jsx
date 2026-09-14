@@ -1,3 +1,7 @@
+// UsersPage.jsx - Staff user management (admin role).
+// Calls GET /users for the list and POST /users to create accounts.
+// New users get a default password (password123) displayed in the create modal.
+
 import { useEffect, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { motion } from 'framer-motion'
@@ -13,6 +17,7 @@ import Avatar from '../components/ui/Avatar'
 import EmptyState from '../components/ui/EmptyState'
 import { ROLES } from '../utils/constants'
 
+// UsersPage - main page; lists active/inactive staff with their roles.
 export default function UsersPage() {
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
@@ -81,6 +86,7 @@ export default function UsersPage() {
   )
 }
 
+// CreateUserModal - modal form for creating a staff account (POST /users).
 function CreateUserModal({ open, onClose, onSaved }) {
   const [form, setForm] = useState({ name: '', email: '', phone: '', role: 'fieldOfficer', assignedArea: '' })
   const [saving, setSaving] = useState(false)

@@ -1,3 +1,6 @@
+// Dashboard controller. Aggregates summary stats, recent activity, collection
+// trends, payment breakdowns, member distribution, and cumulative member
+// growth for the front-end dashboard.
 import Member from "../models/Member.js";
 import Group from "../models/Group.js";
 import Collection from "../models/Collection.js";
@@ -5,10 +8,13 @@ import Payment from "../models/Payment.js";
 import Loan from "../models/Loan.js";
 import Expense from "../models/Expense.js";
 import FieldVisit from "../models/FieldVisit.js";
+import mongoose from "mongoose";
+import { currentOrgId } from "../utils/tenant.js";
 
-// All dashboard start queries run in parallel via Promise.all below. Firing
-// them off one after another would cost a separate MongoDB round-trip per
-// stat — on a busy dashboard for a large cooperative that adds up.
+// GET /api/dashboard/stats
+// Aggregate counts/totals across members, groups, collections, payments,
+// loans, and expenses. All start queries run in parallel via Promise.all —
+// firing them serially would cost a separate MongoDB round-trip per stat.
 export const getStats = async (req, res, next) => {
   try {
     const [
@@ -24,8 +30,8 @@ export const getStats = async (req, res, next) => {
       totalLoansOutstanding,
       totalExpenses,
     ] = await Promise.all([
-      Member.countDocuments({}),
-      Member.countDocuments({ status: "active" }),
+      Member.countDocuments({ deletedAt: null }),
+      Member.countDocuments({ deletedAt: null, status: "active" }),
       Group.countDocuments({ type: { $ne: "organisation" } }),
       Collection.countDocuments({}),
       Collection.aggregate([
@@ -49,6 +55,8 @@ export const getStats = async (req, res, next) => {
       ]),
     ]);
 
+    // All counts/totals are already resolved above; outstandingDues is simple
+    // arithmetic on the owed-vs-paid aggregation results.
     const stats = {
       totalMembers,
       activeMembers,
@@ -71,15 +79,15 @@ export const getStats = async (req, res, next) => {
   }
 };
 
-// Fetches the latest of each activity type, then combines them into a single
-// timeline sorted by date. The limit is applied per-entity before merging
-// (hence the .limit in each query) to avoid pulling thousands of documents
-// just to show 12 recent feed items.
+// GET /api/dashboard/recent-activity
+// Fetches the latest of each activity type and combines them into a single
+// timeline sorted by date. The limit is applied per-entity before merging to
+// avoid pulling thousands of documents just to show 12 recent feed items.
 export const getRecentActivity = async (req, res, next) => {
   try {
     const limit = parseInt(req.query.limit) || 10;
     const [members, collections, payments, visits] = await Promise.all([
-      Member.find()
+      Member.find({ deletedAt: null })
         .select("firstName lastName photo createdAt")
         .populate("registeredBy", "name")
         .sort("-createdAt")
@@ -140,6 +148,9 @@ export const getRecentActivity = async (req, res, next) => {
   }
 };
 
+// GET /api/dashboard/collection-trend
+// Daily collection volume/count over the last N days (default 30), grouped
+// by calendar date via $dateToString.
 export const getCollectionTrend = async (req, res, next) => {
   try {
     const days = parseInt(req.query.days) || 30;
@@ -164,6 +175,9 @@ export const getCollectionTrend = async (req, res, next) => {
   }
 };
 
+// GET /api/dashboard/payment-breakdown
+// Payment totals/counts grouped by status and by method (two small
+// aggregations, returned together).
 export const getPaymentBreakdown = async (req, res, next) => {
   try {
     const byStatus = await Payment.aggregate([
@@ -184,13 +198,17 @@ export const getPaymentBreakdown = async (req, res, next) => {
   }
 };
 
+// GET /api/dashboard/member-distribution
+// Members counted by status, plus the top 10 groups by member count with
+// group names joined via $lookup.
 export const getMemberDistribution = async (req, res, next) => {
   try {
     const byStatus = await Member.aggregate([
+      { $match: { deletedAt: null } },
       { $group: { _id: "$status", count: { $sum: 1 } } },
     ]);
     const byGroup = await Member.aggregate([
-      { $match: { groupId: { $ne: null } } },
+      { $match: { deletedAt: null, groupId: { $ne: null } } },
       {
         $group: {
           _id: "$groupId",
@@ -198,10 +216,16 @@ export const getMemberDistribution = async (req, res, next) => {
         },
       },
       {
+        // Pipeline-form $lookup so the joined group is also constrained to
+        // the tenant's own organisation (a plain localField/foreignField join
+        // would bypass the tenantScope plugin's org filter).
         $lookup: {
           from: "groups",
-          localField: "_id",
-          foreignField: "_id",
+          let: { gid: "$_id" },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$_id", "$$gid"] } } },
+            { $match: { organisationId: new mongoose.Types.ObjectId(String(currentOrgId())) } },
+          ],
           as: "group",
         },
       },
@@ -220,6 +244,7 @@ export const getMemberDistribution = async (req, res, next) => {
   }
 };
 
+// GET /api/dashboard/member-growth
 // Cumulative member count over time, bucketed per full month. This lets the
 // dashboard render a growth line without pulling every member row. Runs a
 // single aggregation over createdAt.
@@ -232,7 +257,7 @@ export const getMemberGrowth = async (req, res, next) => {
     since.setHours(0, 0, 0, 0);
 
     const buckets = await Member.aggregate([
-      { $match: { createdAt: { $gte: since } } },
+      { $match: { createdAt: { $gte: since }, deletedAt: null } },
       {
         $group: {
           _id: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
@@ -244,7 +269,12 @@ export const getMemberGrowth = async (req, res, next) => {
 
     const bucketMap = new Map(buckets.map((b) => [b._id, b.added]));
     const data = [];
-    let running = await Member.countDocuments({ createdAt: { $lt: since } });
+    // running starts from the count of members registered before the window,
+    // then each month's bucket is folded in so the series stays cumulative.
+    let running = await Member.countDocuments({
+      createdAt: { $lt: since },
+      deletedAt: null,
+    });
     for (let i = 0; i < months; i += 1) {
       const d = new Date(since);
       d.setMonth(since.getMonth() + i);

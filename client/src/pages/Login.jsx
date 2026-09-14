@@ -1,3 +1,8 @@
+// Login.jsx - Authentication page with split layout: decorative left panel + login form right panel.
+// Calls AuthContext.login(email, password) then navigates to the redirect path
+// (defaults to /dashboard; preserved from the route the user was blocked from).
+// Shows demo credentials for development. No direct API calls -- auth is handled by AuthContext.
+
 import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Check, ArrowRight } from 'lucide-react'
@@ -46,6 +51,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
+  // `from` preserves the originally-requested path so ProtectedRoute can redirect after login.
   const from = location.state?.from?.pathname || '/dashboard'
 
   const handleSubmit = async (e) => {
@@ -56,6 +62,7 @@ export default function Login() {
       await login(email, password)
       navigate(from, { replace: true })
     } catch (err) {
+      // Axios error shape: err.response.data.message from the server, or a generic fallback.
       setError(err.response?.data?.message || 'Login failed. Please try again.')
     } finally {
       setLoading(false)
@@ -303,14 +310,9 @@ export default function Login() {
                 <label className="block text-[11px] sm:text-xs md:text-sm font-semibold text-dark uppercase tracking-wider">
                   Password
                 </label>
-                <motion.a
-                  href="#"
-                  whileHover={{ x: 2 }}
-                  transition={{ type: 'spring', stiffness: 300, damping: 15 }}
-                  className="text-[11px] sm:text-xs md:text-sm text-primary-hover hover:text-primary transition-colors duration-200 font-medium"
-                >
-                  Reset
-                </motion.a>
+                <span className="text-[11px] sm:text-xs text-muted">
+                  Forgot? Ask your admin
+                </span>
               </div>
               <div className="relative">
                 <input

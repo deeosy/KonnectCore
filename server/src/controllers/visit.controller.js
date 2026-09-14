@@ -1,7 +1,11 @@
+// Field visit and task controller. Officers log visits with GPS/photo data,
+// manage their own task lists, and view per-officer performance metrics.
 import FieldVisit from "../models/FieldVisit.js";
 import Member from "../models/Member.js";
 import Task from "../models/Task.js";
+import mongoose from "mongoose";
 import { ApiError } from "../middleware/error.middleware.js";
+import { currentOrgId } from "../utils/tenant.js";
 
 // Field officers can only see their own visits — this is enforced here, not
 // just in the UI, so an officer cannot query another officer's records via
@@ -27,6 +31,10 @@ export const getVisits = async (req, res, next) => {
   }
 };
 
+// POST /api/visits
+// Logs a field visit. officerId is pinned to the acting officer. GPS
+// coordinates travel in the body (gpsLat/gpsLng); photos are uploaded as
+// multipart files and stored under /uploads/visits.
 export const createVisit = async (req, res, next) => {
   try {
     const data = { ...req.body, officerId: req.user._id };
@@ -42,6 +50,9 @@ export const createVisit = async (req, res, next) => {
   }
 };
 
+// GET /api/visits/officer/:officerId
+// Returns one officer's visits. Admin-only context — the officer-scoped
+// route guard lives on the router.
 export const getVisitsByOfficer = async (req, res, next) => {
   try {
     const visits = await FieldVisit.find({ officerId: req.params.officerId })
@@ -53,9 +64,14 @@ export const getVisitsByOfficer = async (req, res, next) => {
   }
 };
 
+// GET /api/visits/me/members
+// The officer's own scoped query: all members assigned to the current user.
 export const getMyAssignedMembers = async (req, res, next) => {
   try {
-    const members = await Member.find({ assignedOfficerId: req.user._id })
+    const members = await Member.find({
+      assignedOfficerId: req.user._id,
+      deletedAt: null,
+    })
       .populate("groupId", "name")
       .sort("-createdAt");
     res.json({ success: true, count: members.length, data: members });
@@ -64,6 +80,8 @@ export const getMyAssignedMembers = async (req, res, next) => {
   }
 };
 
+// GET /api/visits/me/tasks
+// Officer-scoped task list: only tasks assigned to the acting officer.
 export const getMyTasks = async (req, res, next) => {
   try {
     const tasks = await Task.find({ assignedTo: req.user._id })
@@ -75,6 +93,8 @@ export const getMyTasks = async (req, res, next) => {
   }
 };
 
+// PATCH /api/visits/tasks/:taskId/status
+// Moves a task between statuses (pending/in-progress/completed).
 export const updateTaskStatus = async (req, res, next) => {
   try {
     const task = await Task.findByIdAndUpdate(
@@ -89,6 +109,9 @@ export const updateTaskStatus = async (req, res, next) => {
   }
 };
 
+// POST /api/visits/tasks
+// Creates a task for an officer. createdBy is pinned to the acting user —
+// there is no automatic task creation on visit creation in this controller.
 export const createTask = async (req, res, next) => {
   try {
     const task = await Task.create({
@@ -101,6 +124,9 @@ export const createTask = async (req, res, next) => {
   }
 };
 
+// GET /api/visits/performance
+// Aggregates a visit count per officer over the last N days (default 7).
+// The officer names are joined back via $lookup on the users collection.
 export const getOfficerPerformance = async (req, res, next) => {
   try {
     const since = new Date();
@@ -115,10 +141,16 @@ export const getOfficerPerformance = async (req, res, next) => {
         },
       },
       {
+        // Pipeline-form $lookup so the joined officer is constrained to the
+        // tenant's own users collection (a plain localField/foreignField join
+        // would bypass the tenantScope plugin's org filter).
         $lookup: {
           from: "users",
-          localField: "_id",
-          foreignField: "_id",
+          let: { uid: "$_id" },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$_id", "$$uid"] } } },
+            { $match: { organisationId: new mongoose.Types.ObjectId(String(currentOrgId())) } },
+          ],
           as: "officer",
         },
       },

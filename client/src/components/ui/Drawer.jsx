@@ -1,3 +1,7 @@
+/*
+ * Drawer - Slide-in panel that overlays content from the left or right.
+ * Props: open (boolean), onClose, title, children, size ('sm'|'md'|'lg'|'xl'), side ('left'|'right').
+ */
 import { useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
@@ -6,9 +10,11 @@ export default function Drawer({ open, onClose, title, children, size = 'md', si
   useEffect(() => {
     if (!open) return
     const handler = (e) => {
+      // Close the drawer when the user presses the Escape key
       if (e.key === 'Escape') onClose()
     }
     document.addEventListener('keydown', handler)
+    // Lock body scroll while the drawer is open
     document.body.style.overflow = 'hidden'
     return () => {
       document.removeEventListener('keydown', handler)
@@ -23,12 +29,15 @@ export default function Drawer({ open, onClose, title, children, size = 'md', si
     xl: 'max-w-xl',
   }
 
+  // Determine slide direction based on which side the drawer opens from
   const slideFrom = side === 'left' ? { x: '-100%' } : { x: '100%' }
 
   return (
     <AnimatePresence>
+      {/* AnimatePresence enables exit animations when `open` becomes false */}
       {open && (
         <div className="fixed inset-0 z-50">
+          {/* Backdrop overlay: clicking it triggers onClose */}
           <motion.div
             className="absolute inset-0 bg-dark/40 backdrop-blur-sm"
             initial={{ opacity: 0 }}

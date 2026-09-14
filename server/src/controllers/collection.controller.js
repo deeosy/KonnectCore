@@ -1,3 +1,6 @@
+// Collection (harvest) controller. CRUD for produce deliveries including
+// price/totalValue computation, photo upload, date-range filtering, and
+// batch assignment for shipping.
 import Collection from "../models/Collection.js";
 import Batch from "../models/Batch.js";
 import Member from "../models/Member.js";
@@ -5,6 +8,10 @@ import Group from "../models/Group.js";
 import Organisation from "../models/Organisation.js";
 import { ApiError } from "../middleware/error.middleware.js";
 
+// GET /api/collections
+// Paginated listing with crop/member/batch filters and optional date range.
+// groupId and member-name search are resolved to member ids first, then
+// matched against the collections' memberId.
 export const getCollections = async (req, res, next) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -36,9 +43,9 @@ export const getCollections = async (req, res, next) => {
           ],
         });
       }
-      const members = await Member.find(
-        conditions.length === 1 ? conditions[0] : { $and: conditions },
-      ).select("_id");
+      const members = await Member.find({
+        $and: [...conditions, { deletedAt: null }],
+      }).select("_id");
       memberFilter = { memberId: { $in: members.map((m) => m._id) } };
     }
 
@@ -73,6 +80,8 @@ export const getCollections = async (req, res, next) => {
   }
 };
 
+// GET /api/collections/:id
+// Fetches a single collection with member, capturer, and batch resolved.
 export const getCollection = async (req, res, next) => {
   try {
     const collection = await Collection.findById(req.params.id)
@@ -85,6 +94,11 @@ export const getCollection = async (req, res, next) => {
   }
 };
 
+// POST /api/collections
+// Records a harvest delivery. capturedBy is pinned to the acting user and an
+// optional photo upload is stored under /uploads/collections. When the price
+// comes back as zero, permission errors and unknown crops both land on the
+// same default-price fallback; the zero simply means "unpriced".
 export const createCollection = async (req, res, next) => {
   try {
     const data = { ...req.body, capturedBy: req.user._id };
@@ -126,6 +140,10 @@ export const createCollection = async (req, res, next) => {
   }
 };
 
+// PATCH /api/collections/:id
+// Updates a collection (optionally replacing the photo). totalValue is
+// recomputed here in addition to the model's pre-save hook because
+// findByIdAndUpdate skips save middleware.
 export const updateCollection = async (req, res, next) => {
   try {
     let data = { ...req.body };
@@ -153,6 +171,8 @@ export const updateCollection = async (req, res, next) => {
   }
 };
 
+// DELETE /api/collections/:id
+// Hard-deletes a collection record.
 export const deleteCollection = async (req, res, next) => {
   try {
     const collection = await Collection.findByIdAndDelete(req.params.id);
@@ -163,6 +183,7 @@ export const deleteCollection = async (req, res, next) => {
   }
 };
 
+// POST /api/batches
 // Assigns collections to a shipping batch. If the batch number doesn't
 // exist yet it's created on the fly (status 'open'). After assigning, the
 // batch's totalWeight is recomputed from all collections currently in it,
@@ -205,6 +226,8 @@ export const addToBatch = async (req, res, next) => {
   }
 };
 
+// GET /api/batches
+// Lists all shipping batches (newest first).
 export const getBatches = async (req, res, next) => {
   try {
     const batches = await Batch.find()
@@ -216,6 +239,8 @@ export const getBatches = async (req, res, next) => {
   }
 };
 
+// GET /api/batches/:id
+// Fetches a batch along with every collection assigned to it.
 export const getBatch = async (req, res, next) => {
   try {
     const batch = await Batch.findById(req.params.id);

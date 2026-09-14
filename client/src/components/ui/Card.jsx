@@ -1,6 +1,12 @@
+/*
+ * Card - Container card with optional header (title, subtitle, icon) and action buttons.
+ * Props: title, subtitle, icon, action (single element), actions (single element or array),
+ *        hover (enables lift-on-hover animation), children.
+ */
 import { motion } from 'framer-motion'
 
 export default function Card({ children, className = '', title, subtitle, icon, action, actions, hover = false, ...props }) {
+  // Normalize `actions` prop: accept a single element or an array, always produce an array.
   const actionsList = actions ? (Array.isArray(actions) ? actions : [actions]) : []
   const Wrapper = hover ? motion.div : 'div'
   const wrapperProps = hover

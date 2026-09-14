@@ -72,11 +72,15 @@ export default function LoanRequestModal({ open, onClose, onSaved, member }) {
 
   const amount = Number(form.amount) || 0
   const rate = Number(form.interestRate) || 0
+  // Interest is calculated flat (one-off on the principal) or simple
+  // (pro-rated to the term in months) to preview the total repayable.
   const interest = form.interestType === 'reducing_balance'
     ? amount * (rate / 100) * ((Number(form.durationMonths) || 1) / 12)
     : amount * (rate / 100)
   const totalRepayable = Math.round(amount + interest)
 
+  // Only the essential fields are validated client-side; the server computes
+  // the credit score and applies any stricter loan rules.
   const submit = async () => {
     if (!form.memberId || !form.amount || Number(form.amount) <= 0) {
       toast.error('Select a member and enter a valid amount')

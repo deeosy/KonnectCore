@@ -1,3 +1,5 @@
+// React context that manages authentication state: login/logout, user
+// persistence in localStorage, and role-based helper checks.
 import {
   createContext,
   useContext,
@@ -86,6 +88,8 @@ export function AuthProvider({ children }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
+// Convenience hook that exposes auth state and helpers from the nearest
+// AuthProvider. Throws if used outside the provider tree.
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {

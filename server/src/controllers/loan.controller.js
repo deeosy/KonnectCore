@@ -1,3 +1,6 @@
+// Loan controller. Manages the full loan lifecycle (request > approve >
+// disburse > repay/overdue), computes interest and credit scores, supports
+// automatic harvest deductions, and exposes an on-demand overdue sweep.
 import Loan from "../models/Loan.js";
 import Collection from "../models/Collection.js";
 import { ApiError } from "../middleware/error.middleware.js";
@@ -59,6 +62,8 @@ function calcCreditScore(memberId) {
   });
 }
 
+// GET /api/loans
+// Lists loans filtered by optional status, memberId, or type params.
 export const getLoans = async (req, res, next) => {
   try {
     const { status, memberId, type } = req.query;
@@ -78,6 +83,8 @@ export const getLoans = async (req, res, next) => {
   }
 };
 
+// GET /api/loans/:id
+// Fetches a single loan with member, requester, and approver resolved.
 export const getLoan = async (req, res, next) => {
   try {
     const loan = await Loan.findById(req.params.id)
@@ -91,6 +98,10 @@ export const getLoan = async (req, res, next) => {
   }
 };
 
+// POST /api/loans/request
+// Opens a new loan in 'requested' status. A deterministic credit score is
+// computed from the member's harvest and loan history and stored on the
+// record at request time; balance starts equal to the principal.
 export const requestLoan = async (req, res, next) => {
   try {
     const {
@@ -156,6 +167,10 @@ export const approveLoan = async (req, res, next) => {
   }
 };
 
+// POST /api/loans/:id/disburse
+// Transitions approved -> disbursed (state machine; only pending/approved
+// loans can be disbursed here). Records disbursal time and back-fills a due
+// date from the term if none was set at request time.
 export const disburseLoan = async (req, res, next) => {
   try {
     const loan = await Loan.findById(req.params.id);
@@ -180,6 +195,10 @@ export const disburseLoan = async (req, res, next) => {
   }
 };
 
+// POST /api/loans/:id/repay
+// Records a manual repayment. Repayments are pushed onto an immutable
+// schedule (append-only audit trail), accumulate into amountRepaid, and the
+// loan flips to completed only once amountRepaid covers principal + interest.
 export const recordRepayment = async (req, res, next) => {
   try {
     const loan = await Loan.findById(req.params.id);

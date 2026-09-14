@@ -1,9 +1,20 @@
+// Organisation CRUD and settings controller. Manages cooperative
+// organisations, their configuration (currency, crop prices, quality
+// grades, seasons), and per-admin settings updates.
 import Organisation from '../models/Organisation.js'
 import { ApiError } from '../middleware/error.middleware.js'
 
+// GET /api/organisations
+// Returns the requesting user's own organisation only. A user belongs to at
+// most one tenant; cross-tenant organisation browsing is not exposed.
 export const getOrganisations = async (req, res, next) => {
   try {
-    const organisations = await Organisation.find().sort('-createdAt')
+    if (!req.user.organisationId) {
+      return res.json({ success: true, count: 0, data: [] })
+    }
+    const organisations = await Organisation.find({
+      _id: req.user.organisationId,
+    })
     res.json({ success: true, count: organisations.length, data: organisations })
   } catch (error) {
     next(error)
@@ -123,9 +134,18 @@ export const updateOrgSettings = async (req, res, next) => {
   }
 }
 
+// GET /api/organisations/:id
+// Fetches a single organisation by id. Restricted to the caller's own
+// organisation — a foreign id resolves to 404 (isolation, not enumeration).
 export const getOrganisation = async (req, res, next) => {
   try {
-    const organisation = await Organisation.findById(req.params.id)
+    if (
+      !req.user.organisationId ||
+      String(req.params.id) !== String(req.user.organisationId)
+    ) {
+      throw new ApiError(404, 'Organisation not found')
+    }
+    const organisation = await Organisation.findById(req.user.organisationId)
     if (!organisation) throw new ApiError(404, 'Organisation not found')
     res.json({ success: true, data: organisation })
   } catch (error) {
@@ -133,6 +153,8 @@ export const getOrganisation = async (req, res, next) => {
   }
 }
 
+// POST /api/organisations
+// Creates an organisation; createdBy is pinned to the acting admin.
 export const createOrganisation = async (req, res, next) => {
   try {
     const data = { ...req.body, createdBy: req.user._id }
@@ -143,8 +165,17 @@ export const createOrganisation = async (req, res, next) => {
   }
 }
 
+// PATCH /api/organisations/:id
+// Updates an organisation's metadata (name, code, location, region).
+// Restricted to the caller's own organisation.
 export const updateOrganisation = async (req, res, next) => {
   try {
+    if (
+      !req.user.organisationId ||
+      String(req.params.id) !== String(req.user.organisationId)
+    ) {
+      throw new ApiError(404, 'Organisation not found')
+    }
     const organisation = await Organisation.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true,
@@ -156,8 +187,18 @@ export const updateOrganisation = async (req, res, next) => {
   }
 }
 
+// DELETE /api/organisations/:id
+// Hard-deletes an organisation. Members/users referencing it are not
+// cascade-updated — administrative cleanup is expected alongside. Deletion is
+// only permitted for a user's own organisation.
 export const deleteOrganisation = async (req, res, next) => {
   try {
+    if (
+      !req.user.organisationId ||
+      String(req.params.id) !== String(req.user.organisationId)
+    ) {
+      throw new ApiError(404, 'Organisation not found')
+    }
     const organisation = await Organisation.findByIdAndDelete(req.params.id)
     if (!organisation) throw new ApiError(404, 'Organisation not found')
     res.json({ success: true, message: 'Organisation removed' })

@@ -1,4 +1,11 @@
-﻿import { useEffect, useState, useCallback } from "react";
+﻿// MemberDetail.jsx - Single member profile with tabbed view (Overview, Farm & Crops,
+// Collections, Payments, Loans, Documents).
+// Calls GET /members/:id, GET /members/:id/history and GET /farms/member/:id on load.
+// Sub-actions: settle produce payments (POST /payments/produce), upload documents
+// (POST /members/:id/documents), and full CRUD on farm/crop via /farms routes.
+// Contains modal components for crop/farm edit, crop delete, and repayment flows.
+
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   ArrowLeft,
@@ -29,6 +36,7 @@ import { CROPS } from "../utils/constants";
 import CollectionModal from "../components/collections/CollectionModal";
 import LoanRequestModal from "../components/loans/LoanRequestModal";
 
+// Tab definitions for the profile detail view.
 const tabs = [
   { key: "overview", label: "Overview", icon: User },
   { key: "farm", label: "Farm & Crops", icon: Sprout },
@@ -38,6 +46,7 @@ const tabs = [
   { key: "documents", label: "Documents", icon: FileText },
 ];
 
+// MemberDetail - loads member + history + farm data and manages the active tab.
 export default function MemberDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -292,6 +301,7 @@ function OverviewTab({ member, farm, history }) {
   );
 }
 
+// CROP_STATUSES - available lifecycle states for a crop entry.
 const CROP_STATUSES = [
   { value: "planted", label: "Planted" },
   { value: "growing", label: "Growing" },
@@ -310,9 +320,12 @@ function formatDateToInput(date) {
   if (!date) return ""
   const d = new Date(date)
   if (Number.isNaN(d.getTime())) return ""
+  // toISOString assumes UTC; used here because local midnight Date objects (e.g. new Date())
+  // convert cleanly to a YYYY-MM-DD string for <input type="date">.
   return d.toISOString().slice(0, 10)
 }
 
+// FarmTab - shows the member's farm profile and crop list with edit/add/delete actions.
 function FarmTab({ member, farm, onRefresh }) {
   const [cropModal, setCropModal] = useState({ open: false, crop: null })
   const [farmModal, setFarmModal] = useState(false)
@@ -439,6 +452,7 @@ function FarmTab({ member, farm, onRefresh }) {
   )
 }
 
+// CropFormModal - create/edit crop for the member's farm (POST/PUT /farms/member/:id/crops).
 function CropFormModal({ open, crop, memberId, onClose, onSaved }) {
   const [form, setForm] = useState({
     cropName: "",
@@ -492,6 +506,7 @@ function CropFormModal({ open, crop, memberId, onClose, onSaved }) {
     }
     const payload = {
       ...form,
+      // Coerce numeric fields only when provided; undefined keeps server defaults.
       areaHectares: form.areaHectares ? Number(form.areaHectares) : undefined,
       estimatedYield: form.estimatedYield ? Number(form.estimatedYield) : undefined,
       actualYield: form.actualYield ? Number(form.actualYield) : undefined,
@@ -595,6 +610,7 @@ function CropFormModal({ open, crop, memberId, onClose, onSaved }) {
   )
 }
 
+// FarmDetailsModal - create/edit the member's farm profile (POST /farms/member/:id or PUT /farms/:id).
 function FarmDetailsModal({ open, farm, memberId, onClose, onSaved }) {
   const [form, setForm] = useState({
     farmSize: "",
@@ -710,6 +726,7 @@ function FarmDetailsModal({ open, farm, memberId, onClose, onSaved }) {
   )
 }
 
+// DeleteCropModal - confirmation dialog for removing a crop (DELETE /farms/member/:id/crops/:cropId).
 function DeleteCropModal({ crop, memberId, onClose, onDeleted }) {
   const [saving, setSaving] = useState(false)
 
@@ -756,6 +773,8 @@ function CollectionsTab({ member, collections, onRefresh }) {
   const [settleForm, setSettleForm] = useState({ method: "cash", paymentDate: formatDateToInput(new Date()) })
   const [checked, setChecked] = useState({})
 
+  // Selected rows are the checked collection ids resolved against the history list;
+  // settleTotal sums their totalValue for display and for the produce-payment payload.
   const selectedCollectionIds = Object.keys(checked || {}).filter((id) => checked[id])
   const selected = collections.filter((c) => selectedCollectionIds.includes(c._id))
   const settleTotal = selected.reduce((s, c) => s + (c.totalValue || 0), 0)
@@ -929,6 +948,7 @@ function CollectionsTab({ member, collections, onRefresh }) {
   );
 }
 
+// PaymentsTab - read-only payment history table for the member.
 function PaymentsTab({ payments }) {
   return (
     <div>
@@ -977,6 +997,7 @@ function PaymentsTab({ payments }) {
   );
 }
 
+// LoansTab - loan summary cards for the member with a link to request a new loan.
 function LoansTab({ member, loans, onRefresh }) {
   const [requestOpen, setRequestOpen] = useState(false)
 
@@ -1060,6 +1081,7 @@ function LoansTab({ member, loans, onRefresh }) {
   );
 }
 
+// DocumentsTab - lists member attachments and uploads new documents as multipart form data.
 function DocumentsTab({ member, onRefresh }) {
   const [uploading, setUploading] = useState(false);
 

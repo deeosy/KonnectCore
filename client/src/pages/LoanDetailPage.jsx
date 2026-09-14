@@ -1,3 +1,8 @@
+// LoanDetailPage.jsx - Single loan detail with approve/disburse, repayment, and auto-deduct.
+// Calls GET /loans/:id, PUT /loans/:id/approve, PUT /loans/:id/disburse,
+// and POST /loans/auto-deduct. Repayments are recorded via the RepaymentModal.
+// Banners warn when a loan is overdue or its due date has passed.
+
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, AlertTriangle, Check, Coins, Send, Sparkles } from 'lucide-react'
@@ -12,6 +17,9 @@ import Input from '../components/ui/Input'
 import RepaymentModal from '../components/loans/RepaymentModal'
 import { formatCurrency, formatDate, formatDateTime } from '../utils/format'
 
+// computeTotalRepayable - helper that calculates what is owed including interest.
+// reducing_balance interest is annual, pro-rated over durationMonths; flat rate is a
+// one-time percentage on the principal. Rounds to whole cedis.
 function computeTotalRepayable(loan) {
   const amount = loan.amount || 0
   const rate = loan.interestRate || 0
@@ -22,6 +30,7 @@ function computeTotalRepayable(loan) {
   return Math.round(amount + amount * (rate / 100))
 }
 
+// LoanDetailPage - loads a single loan and wires up approve/disburse/repay/deduct actions.
 export default function LoanDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -65,6 +74,8 @@ export default function LoanDetailPage() {
     }
   }
 
+  // autoDeduct - takes a produce value and lets the server split up to 30% across
+  // the member's active loans; sums the per-loan deductions for the success toast.
   const autoDeduct = async () => {
     const produceValue = Number(deductVal)
     if (!produceValue || produceValue <= 0) {
@@ -103,7 +114,9 @@ export default function LoanDetailPage() {
   }
 
   const totalRepayable = computeTotalRepayable(loan)
+  // isPastDue compares local now against the UTC-parsed due date.
   const isPastDue = loan.dueDate && new Date(loan.dueDate) < new Date()
+  // Action availability is derived entirely from the loan status.
   const canDisburse = loan.status === 'approved'
   const canApprove = loan.status === 'pending'
   const canRepay = ['approved', 'disbursed', 'overdue'].includes(loan.status)

@@ -1,3 +1,8 @@
+// App.jsx - Root routing table for KonnectCore.
+// Wraps all routes in BrowserRouter, AuthProvider (auth context), and ToastProvider.
+// Public routes: /, /login. All other routes live under a ProtectedRoute + AppLayout
+// layout route, with optional role-based guards on specific pages.
+
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
@@ -23,6 +28,13 @@ import UsersPage from './pages/UsersPage'
 import AuditLogsPage from './pages/AuditLogsPage'
 import SettingsPage from './pages/SettingsPage'
 
+// App - top-level component that defines every client-side route.
+// Role-restricted routes wrap their element in <ProtectedRoute roles={[...]}>.
+// Members list is restricted to admin/manager/fieldOfficer; Groups, Farms, Payments,
+// Expenses, Loans, Reports to admin/manager; Users, Audit, Settings to admin only.
+// /members/new and /members/:id/edit reuse MemberNew (edit mode detected via :id param).
+// /collections/new auto-opens the record-collection modal via the autoOpen prop.
+// Catch-all routes redirect to /dashboard.
 function App() {
   return (
     <BrowserRouter>

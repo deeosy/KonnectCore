@@ -1,13 +1,19 @@
+// User model — staff accounts for authentication and role-based access control.
+// Used by auth controllers (register, login), admin user management, and as a
+// reference in audit logs, field officer assignments, and collection capture.
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
+import tenantScope from "./plugins/tenantScope.js";
 
 const userSchema = new mongoose.Schema(
   {
+    // -- Core identity --
     name: {
       type: String,
       required: [true, "Name is required"],
       trim: true,
     },
+    // -- Authentication credentials --
     email: {
       type: String,
       required: [true, "Email is required"],
@@ -20,11 +26,13 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: [true, "Password is required"],
       minlength: [6, "Password must be at least 6 characters"],
+      // Hashed via pre-save hook below; never stored in plain text.
     },
     phone: {
       type: String,
       trim: true,
     },
+    // -- Role-based access control --
     role: {
       type: String,
       enum: ["admin", "manager", "fieldOfficer"],
@@ -34,6 +42,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    // -- Tenant ownership --
     organisationId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Organisation",
@@ -41,6 +50,7 @@ const userSchema = new mongoose.Schema(
     photo: {
       type: String,
     },
+    // Soft-delete flag; inactive users cannot log in but records are retained.
     isActive: {
       type: Boolean,
       default: true,
@@ -65,6 +75,9 @@ userSchema.pre("save", async function (next) {
 userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
+
+// Tenant isolation (see plugin comment for details).
+userSchema.plugin(tenantScope);
 
 const User = mongoose.model("User", userSchema);
 

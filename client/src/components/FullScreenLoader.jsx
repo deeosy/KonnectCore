@@ -1,3 +1,7 @@
+/*
+ * FullScreenLoader - Full-viewport loading indicator with brand icon and spinner.
+ * Used during initial auth state validation and other blocking async operations.
+ */
 import { Loader2, Sprout } from 'lucide-react'
 
 export default function FullScreenLoader() {

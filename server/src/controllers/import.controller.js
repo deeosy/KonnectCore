@@ -1,3 +1,7 @@
+// CSV/XLSX import and export controller. Parses uploaded spreadsheets via
+// the xlsx library, normalises row headers, validates required fields, and
+// bulk-inserts members with partial-failure reporting. Also provides a
+// filtered member export as an .xlsx download.
 import Member from "../models/Member.js";
 import Group from "../models/Group.js";
 
@@ -55,6 +59,12 @@ const validateRow = (row, index) => {
   return errors;
 };
 
+// POST /api/import/members
+// Bulk-imports members from an uploaded CSV/XLSX file. Flow is:
+// multer stores the file -> xlsx parses the first sheet -> each row is
+// validated and normalized -> valid rows are bulk-inserted. Insert uses
+// ordered:false so one bad row doesn't abort the rest; failures are reported
+// per-row in the response.
 export const importMembers = async (req, res, next) => {
   try {
     if (!req.file) {
@@ -63,7 +73,7 @@ export const importMembers = async (req, res, next) => {
         .json({ success: false, message: "No file uploaded" });
     }
 
-    const XLSX = await import("xlsx");
+    const XLSX = (await import("xlsx")).default;
     const workbook = XLSX.readFile(req.file.path);
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(sheet);
@@ -72,7 +82,10 @@ export const importMembers = async (req, res, next) => {
       return res.status(400).json({ success: false, message: "File is empty" });
     }
 
-    const orgId = req.body.organisationId || req.user.organisationId;
+    // Always scope imports to the acting user's organisation. Never trust a
+    // client-supplied organisationId in the body — the tenantScope plugin also
+    // re-stamps on insertMany, so a smuggled id can never land.
+    const orgId = req.user.organisationId;
 
     const validationErrors = [];
     const validMembers = [];
@@ -124,10 +137,15 @@ export const importMembers = async (req, res, next) => {
   }
 };
 
+// GET /api/import/export
+// Exports members (with the same filters as the member list) as a generated
+// .xlsx download, attached as a file response rather than JSON.
 export const exportMembers = async (req, res, next) => {
   try {
     const filter = {};
     const { search, status, groupId, crop } = req.query;
+    // Soft-deleted members are excluded from exports.
+    filter.deletedAt = null;
 
     if (search) {
       filter.$or = [
@@ -160,7 +178,7 @@ export const exportMembers = async (req, res, next) => {
       CreatedAt: m.createdAt,
     }));
 
-    const XLSX = await import("xlsx");
+    const XLSX = (await import("xlsx")).default;
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Members");

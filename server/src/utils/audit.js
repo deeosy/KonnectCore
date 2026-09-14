@@ -1,8 +1,13 @@
+// Audit utilities — provides logAudit() for programmatic audit writes and
+// an Express middleware factory audit() that automatically logs request
+// outcomes. Used across all controllers to maintain a compliant audit trail.
 import AuditLog from "../models/AuditLog.js";
 
 // Fields that must never land in the audit trail in raw form.
 const SENSITIVE_KEYS = ["password", "token", "photo", "photos", "documents"];
 
+// Recursively strips sensitive keys from an object before persisting it.
+// Arrays and nested objects are walked so deeply-nested secrets are caught.
 const sanitize = (value) => {
   if (value === null || value === undefined) return value;
   if (Array.isArray(value)) return value.map(sanitize);
@@ -17,7 +22,8 @@ const sanitize = (value) => {
 };
 
 // Non-fatal by contract: an audit write failure must never break the request
-// it is describing.
+// it is describing. Accepts either a User document or a raw ObjectId as `user`;
+// organisationId is resolved from the user document when not provided directly.
 export async function logAudit({
   user,
   action,
@@ -47,6 +53,9 @@ export async function logAudit({
   }
 }
 
+// Extracts a short human-readable summary from a request body for the audit
+// trail. Tries well-known name/title fields first; falls back to key=value
+// pairs for memberId, amount, and quantity.
 const pickSummary = (body) => {
   const b = body || {};
   const keys = ["name", "firstName", "lastName", "title", "label", "crop", "type", "category"];
@@ -60,9 +69,13 @@ const pickSummary = (body) => {
   return parts.join(" ");
 };
 
-// Express middleware. Wraps res.send so the created/changed document id can be
-// captured (most create/update responses return {data:{_id}}), and logs only
-// once the response has finished so the success flag reflects the true outcome.
+// Express middleware factory. Wraps res.send so the created/changed document
+// id can be captured (most create/update responses return {data:{_id}}), and
+// logs only once the response has finished so the success flag reflects the
+// true outcome (success = statusCode < 400). Extracts resourceId from:
+//   1. opts.resourceIdFrom(req) — explicit override
+//   2. Common route params (id, groupId, taskId)
+//   3. The JSON response body's data._id field
 export function audit(action, resource, opts = {}) {
   return (req, res, next) => {
     const originalSend = res.send.bind(res);

@@ -1,3 +1,9 @@
+// PaymentsPage.jsx - Payments & Dues dashboard with two tabs (All Payments / Outstanding Dues).
+// Calls GET /payments (limit=100, status/type/search filters), GET /payments/outstanding,
+// DELETE /payments/:id, and GET /payments/:id/status (gateway status check).
+// Records payments via the PaymentModal component. Aggregates (received/paidOut/momo/all)
+// are derived from the loaded payments. Search input is debounced by 350ms.
+
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
@@ -16,6 +22,7 @@ import PaymentModal from '../components/payments/PaymentModal'
 import { PAYMENT_TYPES, PAYMENT_STATUSES } from '../utils/constants'
 import { formatCurrency, formatDate } from '../utils/format'
 
+// TYPE_COLOR - text colors per payment type for the table rows.
 const TYPE_COLOR = {
   produce_payment: 'text-primary',
   dues: 'text-secondary',
@@ -24,6 +31,8 @@ const TYPE_COLOR = {
   expense: 'text-danger',
 }
 
+// gatewayBadge - maps Hubtel gateway statuses to a Badge-friendly status.
+// Simulated transactions (no Hubtel credentials) are labeled "Sim" instead.
 const gatewayBadge = (p) => {
   if (p.gateway !== 'hubtel') return null
   const map = { success: 'paid', pending: 'pending', failed: 'cancelled' }
@@ -31,6 +40,7 @@ const gatewayBadge = (p) => {
   return { status: map[p.gatewayStatus] || 'pending', label }
 }
 
+// PaymentsPage - main component; owns tab state, filters, and fetch/delete/refresh logic.
 export default function PaymentsPage() {
   const { hasRole } = useAuth()
   const [tab, setTab] = useState('all')
@@ -65,6 +75,8 @@ export default function PaymentsPage() {
       .finally(() => setLoading(false))
   }, [fetchPayments, fetchOutstanding])
 
+  // searchDebounced - defers the search filter update by 350ms so typing doesn't
+  // fire a request on every keystroke. The timer is cleared between calls.
   const searchDebounced = (value) => {
     clearTimeout(searchTimer.current)
     searchTimer.current = setTimeout(() => {
@@ -99,6 +111,9 @@ export default function PaymentsPage() {
     }
   }
 
+  // totals - derived sums over loaded payments: money received from members (dues,
+  // contributions, savings), produce money paid out, mobile-money volume, and total.
+  // Cancelled payments are excluded entirely.
   const totals = payments.reduce(
     (acc, p) => {
       if (p.status === 'cancelled') return acc

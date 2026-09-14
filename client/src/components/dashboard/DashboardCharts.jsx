@@ -1,3 +1,10 @@
+/*
+ * DashboardCharts - Three dashboard panels using recharts:
+ *  1. Collection Trend (area chart with 7D/30D/90D toggle)
+ *  2. Payment Breakdown (donut chart toggling between status and method views)
+ *  3. Member Growth (cumulative line + monthly-additions dashed area)
+ * Each panel fetches from its own /dashboard/* endpoint.
+ */
 import { useEffect, useState } from 'react'
 import {
   ResponsiveContainer,
@@ -49,21 +56,23 @@ export default function DashboardCharts() {
   const [trendDays, setTrendDays] = useState(30)
   const [trend, setTrend] = useState([])
   const [breakdown, setBreakdown] = useState(null)
-  const [breakdownView, setBreakdownView] = useState('status')
+  const [breakdownView, setBreakdownView] = useState('status') // Toggles between 'status' and 'method' views
   const [growth, setGrowth] = useState([])
   const [trendLoading, setTrendLoading] = useState(true)
   const [breakdownLoading, setBreakdownLoading] = useState(true)
   const [growthLoading, setGrowthLoading] = useState(true)
 
   useEffect(() => {
+    // `active` flag prevents state updates on unmounted component (stale closure guard)
     let active = true
     api
+      // Fetch collection-trend data; re-fetches when `trendDays` changes (7/30/90)
       .get('/dashboard/collection-trend', { params: { days: trendDays } })
       .then(({ data }) => {
         if (active)
           setTrend(data.data.map((p) => ({ date: p._id, total: p.total })))
       })
-      .catch(() => {})
+      .catch(() => {}) // Silently ignore errors; empty chart will display instead
       .finally(() => active && setTrendLoading(false))
     return () => {
       active = false
@@ -77,7 +86,7 @@ export default function DashboardCharts() {
       .then(({ data }) => {
         if (active) setBreakdown(data.data)
       })
-      .catch(() => {})
+      .catch(() => {}) // Silently ignore errors; empty state will render instead
       .finally(() => active && setBreakdownLoading(false))
     return () => {
       active = false
@@ -91,13 +100,14 @@ export default function DashboardCharts() {
       .then(({ data }) => {
         if (active) setGrowth(data.data)
       })
-      .catch(() => {})
+      .catch(() => {}) // Silently ignore errors; empty state will render instead
       .finally(() => active && setGrowthLoading(false))
     return () => {
       active = false
     }
   }, [])
 
+  // Switch between payment-by-status and payment-by-method data sets
   const breakdownData =
     breakdownView === 'status' ? (breakdown?.byStatus || []) : (breakdown?.byMethod || [])
 
@@ -111,6 +121,7 @@ export default function DashboardCharts() {
           icon={<TrendingUp className="h-5 w-5" />}
           actions={
             <div className="flex gap-1 rounded-xl bg-subtle/60 p-1">
+              {/* Day-range toggle buttons (7D / 30D / 90D) for the collection trend chart */}
               {[7, 30, 90].map((d) => (
                 <button
                   key={d}

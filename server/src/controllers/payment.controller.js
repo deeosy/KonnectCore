@@ -1,3 +1,7 @@
+// Payment controller. Manages dues, contributions, savings, and produce
+// payouts. Integrates with the Hubtel mobile-money gateway for send/
+// receive flows, auto-derives status from amountPaid, and provides an
+// outstanding-dues aggregation endpoint.
 import Payment from "../models/Payment.js";
 import Member from "../models/Member.js";
 import Collection from "../models/Collection.js";
@@ -17,6 +21,9 @@ function generateReceiptNumber() {
   return `RCP-${Date.now().toString().slice(-8)}-${Math.floor(Math.random() * 100)}`;
 }
 
+// GET /api/payments
+// Paginated listing with status/type/member filters and an optional date
+// range. Text search resolves member ids first, then filters on memberId.
 export const getPayments = async (req, res, next) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -29,6 +36,7 @@ export const getPayments = async (req, res, next) => {
     if (memberId) filter.memberId = memberId;
     if (search) {
       const matchIds = await Member.find({
+        deletedAt: null,
         $or: [
           { firstName: { $regex: search, $options: "i" } },
           { lastName: { $regex: search, $options: "i" } },
@@ -66,6 +74,11 @@ export const getPayments = async (req, res, next) => {
   }
 };
 
+// POST /api/payments
+// Records a payment (dues/contribution/savings/produce). Generates a receipt
+// number, derives status from amountPaid, and routes mobile_money through
+// Hubtel (receive for member deposits, send for produce payouts). Client-
+// supplied msisdn/channel are transient and removed before persisting.
 export const createPayment = async (req, res, next) => {
   try {
     const data = { ...req.body, processedBy: req.user._id };
@@ -208,6 +221,8 @@ export const createProducePayment = async (req, res, next) => {
   }
 };
 
+// GET /api/payments/:id
+// Fetches a payment with member, processor, and related collections resolved.
 export const getPayment = async (req, res, next) => {
   try {
     const payment = await Payment.findById(req.params.id)
@@ -221,6 +236,9 @@ export const getPayment = async (req, res, next) => {
   }
 };
 
+// PATCH /api/payments/:id
+// Updates payment fields. Payment status is recomputed when a new amount or
+// amountPaid is supplied (see inline note about findByIdAndUpdate).
 export const updatePayment = async (req, res, next) => {
   try {
     let data = { ...req.body };
@@ -249,6 +267,8 @@ export const updatePayment = async (req, res, next) => {
   }
 };
 
+// DELETE /api/payments/:id
+// Hard-deletes a payment record (no referential checks on related data).
 export const deletePayment = async (req, res, next) => {
   try {
     const payment = await Payment.findByIdAndDelete(req.params.id);
@@ -266,7 +286,7 @@ export const deletePayment = async (req, res, next) => {
 // intentional — we only count fully-settled dues against the total.
 export const getOutstanding = async (req, res, next) => {
   try {
-    const members = await Member.find({ status: "active" }).select(
+    const members = await Member.find({ status: "active", deletedAt: null }).select(
       "firstName lastName phone membershipNumber",
     );
     const result = await Promise.all(

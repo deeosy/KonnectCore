@@ -1,3 +1,8 @@
+// ReportsPage.jsx - Filterable report builder with preview and CSV/XLSX export.
+// Calls GET /reports/:key (with status/groupId/crop/type/from/to filters) and GET /groups
+// (for the dynamic group filter). Export redownloads the report as a blob from
+// /api/reports/:key?format=xlsx|csv using the auth token.
+
 import { useEffect, useMemo, useState } from "react";
 import { FileSpreadsheet, FileDown } from "lucide-react";
 import toast from "react-hot-toast";
@@ -17,6 +22,7 @@ import {
   PAYMENT_TYPES,
 } from "../utils/constants";
 
+// REPORTS - the six available report types and which filters each exposes.
 const REPORTS = [
   {
     key: "members",
@@ -57,6 +63,8 @@ const REPORTS = [
   },
 ];
 
+// FILTER_FIELDS - shared select-filter descriptors. `dynamic` filters pull options
+// from the fetched group list at runtime; the rest use static option lists.
 const FILTER_FIELDS = {
   memberStatus: {
     label: "Status",
@@ -91,6 +99,7 @@ const FILTER_FIELDS = {
   },
 };
 
+// COLUMNS - per-report column definitions for the DataTable preview.
 const COLUMNS = {
   members: [
     { header: "Member", accessor: null, render: (r) => `${r.firstName} ${r.lastName || ""}` },
@@ -165,6 +174,8 @@ const COLUMNS = {
   ],
 };
 
+// ReportsPage - main component; tracks the active report, its filters, preview rows,
+// and export state. Switching reports resets filters to defaults.
 export default function ReportsPage() {
   const [active, setActive] = useState(REPORTS[0]);
   const [filters, setFilters] = useState({ status: "", groupId: "", crop: "", type: "", from: "", to: "" });
@@ -184,6 +195,7 @@ export default function ReportsPage() {
   }, []);
 
   useEffect(() => {
+    // `stale` flag prevents a slower, earlier request overwriting a newer one on unmount/filter change.
     let stale = false;
     const params = new URLSearchParams();
     Object.entries(filters).forEach(([k, v]) => v && params.set(k, v));
@@ -243,6 +255,8 @@ export default function ReportsPage() {
   };
 
   const activeColumns = COLUMNS[active.key] || [];
+  // filterFields - resolves the active report's filter keys into ready-to-render field
+  // definitions, substituting the hub-loaded group options for dynamic filters.
   const filterFields = useMemo(
     () =>
       (active.filter || []).map((k) => ({

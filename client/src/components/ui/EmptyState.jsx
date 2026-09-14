@@ -1,3 +1,7 @@
+/*
+ * EmptyState - Centered placeholder shown when a list or table has no data.
+ * Props: icon (lucide component, default Inbox), title, description, action (element, e.g. a button).
+ */
 import { Inbox } from 'lucide-react'
 
 export default function EmptyState({ icon: Icon = Inbox, title = 'No data', description = 'There is nothing to display yet.', action }) {

@@ -40,6 +40,8 @@ export default function QuickRegisterModal({ open, onClose, onSaved }) {
       if (form.location) fd.append('location', form.location.trim())
       if (form.region) fd.append('region', form.region.trim())
       if (form.notes) fd.append('notes', form.notes.trim())
+      // Officers are auto-attached to the members they register so the new record
+      // appears under their workload without a separate assignment step.
       if (user?.role === 'fieldOfficer' && user?._id) {
         fd.append('assignedOfficerId', user._id)
       }

@@ -1,3 +1,6 @@
+// Express application entry point. Configures middleware, mounts all API
+// route groups, starts the HTTP listener, and schedules the recurring
+// overdue-loan sweep.
 import express from "express";
 import cors from "cors";
 import morgan from "morgan";

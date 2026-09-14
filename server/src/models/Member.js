@@ -1,5 +1,12 @@
+// Member model — central entity representing a cooperative member. Used by
+// member controllers for registration, profile management, status changes, and
+// by collection/payment/loan modules that reference memberId.
 import mongoose from "mongoose";
+import tenantScope from "./plugins/tenantScope.js";
 
+// Embedded sub-document for member identity documents (ID cards, photos,
+// signed agreements). Kept on the member rather than a separate collection so
+// document metadata travels with the profile in a single query.
 const documentSchema = new mongoose.Schema(
   {
     title: { type: String, trim: true },
@@ -22,10 +29,12 @@ const documentSchema = new mongoose.Schema(
 // historical collections that must remain queryable for reporting.
 const memberSchema = new mongoose.Schema(
   {
+    // -- Tenant ownership --
     organisationId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Organisation",
     },
+    // -- Core identity --
     firstName: {
       type: String,
       required: [true, "First name is required"],
@@ -39,10 +48,12 @@ const memberSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    // Auto-generated unique membership number (created in controller).
     membershipNumber: {
       type: String,
       trim: true,
     },
+    // -- Identification documents --
     idType: {
       type: String,
       enum: ["national_id", "voter_id", "passport", "other"],
@@ -55,6 +66,7 @@ const memberSchema = new mongoose.Schema(
     photo: {
       type: String,
     },
+    // -- Location / GPS --
     location: {
       type: String,
       trim: true,
@@ -73,6 +85,7 @@ const memberSchema = new mongoose.Schema(
     gpsLng: {
       type: Number,
     },
+    // -- Farming profile (summary) --
     farmSize: {
       type: Number,
     },
@@ -80,6 +93,7 @@ const memberSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    // -- References / hierarchy --
     groupId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Group",
@@ -88,6 +102,7 @@ const memberSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
+    // -- Status lifecycle: active -> inactive | suspended | blacklisted --
     status: {
       type: String,
       enum: ["active", "inactive", "suspended", "blacklisted"],
@@ -101,6 +116,14 @@ const memberSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    // Soft-delete marker. When set (a timestamp), the member is treated as
+    // removed: hidden from lists/counts/reports but the document — and the
+    // financial/visit records referencing it — are retained so nothing is
+    // orphaned. Set via DELETE /api/members/:id and cleared via restore.
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
     registeredBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -110,6 +133,9 @@ const memberSchema = new mongoose.Schema(
     timestamps: true,
   },
 );
+
+// Tenant isolation (see plugin comment for details).
+memberSchema.plugin(tenantScope);
 
 const Member = mongoose.model("Member", memberSchema);
 

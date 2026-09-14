@@ -1,3 +1,8 @@
+/*
+ * StatCard - Displays a single statistic with icon, value, label, and optional sub-text.
+ * Props: icon (lucide component), label, value, sub, accent ('primary'|'success'|'warning'|'danger'|'info'|'dark'),
+ *        inline (renders label and sub on a single line when true).
+ */
 import { motion } from 'framer-motion'
 
 export default function StatCard({ icon: Icon, label, value, sub, accent = 'primary', inline = false, className = '' }) {
@@ -23,6 +28,7 @@ export default function StatCard({ icon: Icon, label, value, sub, accent = 'prim
         <Icon className={`h-5 w-5 ${a.text}`} />
       </div>
       <p className={`text-2xl font-bold tracking-tight ${a.value}`}>{value}</p>
+      {/* When `inline` is true and `sub` exists, render label and sub on one baseline-aligned line */}
       {inline && sub ? (
         <p className="mt-1 flex items-baseline gap-1.5 text-sm text-muted">
           <span>{label}</span>

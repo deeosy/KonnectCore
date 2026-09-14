@@ -1,8 +1,13 @@
+// Authentication controller. Handles self-registration, login, and the
+// current-user endpoint. Passwords are hashed by the User model pre-save
+// hook (bcrypt). Responses never include the password hash.
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import { ApiError } from "../middleware/error.middleware.js";
 import { logAudit } from "../utils/audit.js";
 
+// Creates a signed JWT embedding the user's _id. The token is stateless —
+// all authorisation checks rely on the protect middleware decoding it.
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN || "7d",
@@ -20,6 +25,8 @@ export const register = async (req, res, next) => {
       throw new ApiError(400, "User with this email already exists");
     }
 
+    // Password is hashed automatically by the User model pre-save hook (bcrypt).
+    // Role is forced to fieldOfficer — elevated roles require admin promotion.
     const user = await User.create({
       name,
       email,
@@ -28,6 +35,7 @@ export const register = async (req, res, next) => {
       role: "fieldOfficer",
     });
 
+    // Return a safe subset of user fields — password hash is never sent to the client.
     res.status(201).json({
       success: true,
       data: {
@@ -39,6 +47,7 @@ export const register = async (req, res, next) => {
         token: generateToken(user._id),
       },
     });
+    // Audit-log the registration event with IP and user context.
     logAudit({
       user,
       action: "register",
@@ -66,11 +75,15 @@ export const login = async (req, res, next) => {
       throw new ApiError(400, "Email and password are required");
     }
 
+    // look up user by email then compare the supplied password against
+    // the bcrypt hash stored on the document.
     const user = await User.findOne({ email });
     if (!user || !(await user.matchPassword(password))) {
       throw new ApiError(401, "Invalid email or password");
     }
 
+    // Deactivated accounts are blocked with 403 (vs 401 for bad creds) so the
+    // client can show a distinct message.
     if (!user.isActive) {
       throw new ApiError(
         403,
@@ -92,6 +105,7 @@ export const login = async (req, res, next) => {
         token: generateToken(user._id),
       },
     });
+    // Audit-log successful login with IP for traceability.
     logAudit({
       user,
       action: "login",
@@ -107,6 +121,9 @@ export const login = async (req, res, next) => {
   }
 };
 
+// GET /api/auth/me
+// Returns the currently authenticated user. The -password projection
+// strips the bcrypt hash from the response.
 export const getMe = async (req, res, next) => {
   try {
     const user = await User.findById(req.user._id).select("-password");

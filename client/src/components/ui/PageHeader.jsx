@@ -1,3 +1,7 @@
+/*
+ * PageHeader - Animated page title bar with optional subtitle and right-aligned action.
+ * Props: title, subtitle, action (element rendered on the right, e.g. a button).
+ */
 import { motion } from 'framer-motion'
 
 export default function PageHeader({ title, subtitle, action }) {

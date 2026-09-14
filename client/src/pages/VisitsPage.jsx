@@ -1,3 +1,7 @@
+// VisitsPage.jsx - Field visit log with monthly/unique-member stats and officer filtering.
+// Calls GET /visits (optionally ?officerId=), plus GET /users for the officer filter (leaders only).
+// Records new visits via the VisitModal component. Stats are derived from the loaded visits.
+
 import { useEffect, useState, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { MapPinned, Users } from 'lucide-react'
@@ -12,6 +16,7 @@ import StatCard from '../components/ui/StatCard'
 import VisitModal from '../components/visits/VisitModal'
 import { formatDate } from '../utils/format'
 
+// VisitsPage - main page; only leaders (admin/manager) see the officer filter dropdown.
 export default function VisitsPage() {
   const { hasRole } = useAuth()
   const isLeader = hasRole('admin') || hasRole('manager')
@@ -44,6 +49,7 @@ export default function VisitsPage() {
       .catch(() => setOfficers([]))
   }, [isLeader])
 
+  // Derived stats: visits in the current calendar month and the count of distinct members visited.
   const startOfMonth = new Date()
   startOfMonth.setDate(1)
   const monthVisits = visits.filter((v) => new Date(v.date) >= startOfMonth).length

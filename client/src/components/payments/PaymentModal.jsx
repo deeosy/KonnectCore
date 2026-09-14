@@ -17,6 +17,8 @@ const dateInputValue = (date) => {
   return d.toISOString().slice(0, 10)
 }
 
+// Explains the Hubtel money flow to the user — receivables come from the
+// member, produce payouts go out to them.
 const DIRECTION_HINT = {
   dues: 'Collected from the member via Hubtel (receive).',
   contribution: 'Collected from the member via Hubtel (receive).',
@@ -24,6 +26,8 @@ const DIRECTION_HINT = {
   produce_payment: 'Payout from the coop to the member via Hubtel (send).',
 }
 
+// Mobile money networks supported by the Hubtel gateway; the API expects
+// these exact channel identifiers.
 const MOMO_CHANNELS = [
   { value: 'mtn-gh', label: 'MTN Mobile Money' },
   { value: 'vodafone-gh', label: 'Vodafone Cash / Telecel' },
@@ -84,10 +88,14 @@ setMemberSearch('')
       setErrors({})
     }, [open, member, initial])
 
+  // Mobile money only goes through the Hubtel gateway for these receivable/payout
+  // types; other types are recorded directly without a gateway call.
   const needsGateway =
     form.method === 'mobile_money' &&
     ['dues', 'contribution', 'savings', 'produce_payment'].includes(form.type)
 
+  // Money flows in (received from member) for contributions/dues/savings and
+  // out (coop payout) for produce payments.
   const direction = form.type === 'produce_payment' ? 'out' : 'in'
 
   const searchMembers = (term) => {
@@ -112,10 +120,13 @@ setMemberSearch('')
 
   const selectedMember = memberResults.find((m) => m._id === form.memberId)
   const amount = Number(form.amount) || 0
+  // Blank "amount paid" means settle in full; otherwise default to the amount.
   const amountPaid = form.amountPaid === '' ? amount : Number(form.amountPaid) || 0
+  // Derive the payment status from the paid-against-amount balance.
   const status = amountPaid >= amount && amount > 0 ? 'paid' : amountPaid > 0 ? 'part_paid' : 'pending'
 
   const submit = async () => {
+    // Validate per-field; msisdn is only required when Hubtel mobile money is used.
     const nextErrors = {
       memberId: required(form.memberId, 'Member'),
       amount: positive(form.amount, 'Amount'),
@@ -135,6 +146,7 @@ setMemberSearch('')
         paymentDate: form.paymentDate || new Date(),
         referenceNumber: form.referenceNumber || undefined,
         description: form.description || undefined,
+        // Gateway fields are sent only for Hubtel mobile money payments.
         ...(needsGateway ? { msisdn: form.msisdn || undefined, channel: form.channel } : {}),
       }
       await api.post('/payments', payload)

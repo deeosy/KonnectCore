@@ -1,3 +1,6 @@
+// Member history controller. Builds a unified activity timeline by merging
+// collections, payments, loans, and field visits into a single chronologically
+// sorted feed for a given member.
 import Collection from "../models/Collection.js";
 import Payment from "../models/Payment.js";
 import Loan from "../models/Loan.js";
@@ -14,6 +17,10 @@ const addTimestamps = (items) =>
     ts: new Date(i.date || i.createdAt || 0).getTime(),
   }));
 
+// GET /api/history/member/:id
+// Assembles a member's full history. The four record types are fetched in
+// parallel, flattened into a shared timeline shape via addTimestamps, and
+// sorted newest-first by the normalized timestamp.
 export const getMemberHistory = async (req, res, next) => {
   try {
     const member = await Member.findById(req.params.id);

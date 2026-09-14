@@ -1,3 +1,7 @@
+// Reporting controller. Each endpoint builds a filter/match pipeline from
+// query params, transforms the results into a flat export-ready shape, and
+// branches on ?format=xlsx|csv via the export utils. When no format is
+// requested the raw JSON is returned.
 import Member from "../models/Member.js";
 import Collection from "../models/Collection.js";
 import Payment from "../models/Payment.js";
@@ -18,10 +22,15 @@ const dateFromTo = (from, to) => {
   return filter;
 };
 
+// GET /api/reports/members
+// Member report. Builds a filter from status/groupId/crop/search, maps rows
+// to a flat export shape, then returns JSON or hands off to xlsx/csv.
 export const memberReport = async (req, res, next) => {
   try {
     const filter = {};
     const { status, groupId, crop, search } = req.query;
+    // Hide soft-deleted members from reports and exports.
+    filter.deletedAt = null;
     if (search)
       filter.$or = [
         { firstName: { $regex: search, $options: "i" } },
@@ -38,6 +47,9 @@ export const memberReport = async (req, res, next) => {
       .populate("assignedOfficerId", "name")
       .lean();
 
+    // Flattened rows are computed once and shared by all output formats — data
+    // is hoisted before the xlsx/csv branches instead of being re-mapped per
+    // branch, so column selection stays consistent.
     const data = members.map((m) => ({
       firstName: m.firstName,
       lastName: m.lastName,
@@ -68,6 +80,10 @@ export const memberReport = async (req, res, next) => {
   }
 };
 
+// GET /api/reports/collections
+// Collection report with crop/member/group filters and date range. Group
+// filter is pre-resolved to member ids. Returns JSON (with volume/value
+// totals) or an xlsx/csv export.
 export const collectionReport = async (req, res, next) => {
   try {
     const filter = {};
@@ -77,7 +93,7 @@ export const collectionReport = async (req, res, next) => {
 
     let byGroup = null;
     if (groupId) {
-      const members = await Member.find({ groupId }).select("_id");
+      const members = await Member.find({ groupId, deletedAt: null }).select("_id");
       byGroup = { memberId: { $in: members.map((m) => m._id) } };
     }
     const dateFilter = dateFromTo(from, to);
@@ -134,6 +150,10 @@ export const collectionReport = async (req, res, next) => {
   }
 };
 
+// GET /api/reports/payments
+// Payment report filtered by status/type/member and date range. Totals for
+// amount vs amountPaid are computed for the JSON response; exports reuse the
+// same flattened rows.
 export const paymentReport = async (req, res, next) => {
   try {
     const filter = {};
@@ -197,7 +217,7 @@ export const groupReport = async (req, res, next) => {
 
     const summary = await Promise.all(
       groups.map(async (g) => {
-        const members = await Member.find({ groupId: g._id }).select("_id");
+        const members = await Member.find({ groupId: g._id, deletedAt: null }).select("_id");
         const memberIds = members.map((m) => m._id);
         const collections = await Collection.find({
           memberId: { $in: memberIds },
@@ -247,6 +267,9 @@ export const groupReport = async (req, res, next) => {
   }
 };
 
+// GET /api/reports/loans
+// Loan report filtered by optional status. Rows expose principal, interest
+// rate, repaid amount, balance, and due date.
 export const loanReport = async (req, res, next) => {
   try {
     const { status } = req.query;
@@ -285,6 +308,8 @@ export const loanReport = async (req, res, next) => {
   }
 };
 
+// GET /api/reports/expenses
+// Expense report listing all expenses with a running total for JSON output.
 export const expenseReport = async (req, res, next) => {
   try {
     const expenses = await Expense.find()

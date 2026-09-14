@@ -3,6 +3,11 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 
+// File-upload middleware built on multer. All uploads are written to disk
+// under <server>/uploads/<resource>/ with the file path (not file data) kept
+// in the owning document; the exported helpers are the per-resource field
+// parsers used individually by routes.
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -56,5 +61,6 @@ export const uploadMemberPhoto = upload("members").single("photo");
 export const uploadMemberDocument = upload("documents").single("document");
 export const uploadCollectionPhoto = upload("collections").single("photo");
 export const uploadVisitPhoto = upload("visits").single("photo");
+// Up to 5 photos per visit, collected into req.files.
 export const uploadVisitPhotos = upload("visits").array("photos", 5);
 export const uploadCsv = upload("members").single("file");

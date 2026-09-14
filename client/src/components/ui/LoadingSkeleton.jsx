@@ -1,3 +1,7 @@
+/*
+ * LoadingSkeleton - Pulse-animated placeholder rows shown while data loads.
+ * Props: rows (number of skeleton rows to render, default 3).
+ */
 export default function LoadingSkeleton({ rows = 3, className = '' }) {
   return (
     <div className={`space-y-3 ${className}`}>

@@ -13,16 +13,19 @@ const cropSchema = new mongoose.Schema(
       trim: true,
       unique: true,
     },
+    // -- Display and ordering --
     category: {
       type: String,
       trim: true,
       default: "other",
     },
+    // Default unit of measure when this crop is selected in collections.
     unit: {
       type: String,
       trim: true,
       default: "kg",
     },
+    // Soft-delete flag; admins can deactivate crops without removing them.
     isActive: {
       type: Boolean,
       default: true,

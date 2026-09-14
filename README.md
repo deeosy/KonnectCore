@@ -192,7 +192,7 @@ No MVP module is at zero, but the following requirements are effectively unbuilt
 | Reports | 🟡 Partial | Date filter + Excel export (effective); no dropdown filters, no CSV, no charts |
 | System Config / Audit Log | ❌ Not started | No admin settings page, no audit viewer |
 
-**Frontend gaps worth noting:** the topbar Search button and Notification bell in `AppLayout.jsx` are decorative (no handler). Several pages use `alert()` instead of toasts. The `recharts` dependency is installed but unused.
+**Frontend gaps worth noting:** (resolved during cleanup) the topbar Search button now opens a live global member-search popover and the Notification bell opens an honest placeholder panel; the remaining `alert()` calls were replaced with toasts during Phase 12.
 
 ---
 
@@ -201,7 +201,7 @@ No MVP module is at zero, but the following requirements are effectively unbuilt
 | Area | Status | Notes |
 |---|---|---|
 | Auth APIs | ✅ Complete | `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me`; JWT + bcrypt |
-| Member APIs | ✅ Complete | List (search/filter/pagination), get, create, update, delete (hard delete), documents, history, import, export, template |
+| Member APIs | ✅ Complete | List (search/filter/pagination), get, create, update, soft delete, restore, documents, history, import, export, template |
 | Group APIs | ✅ Complete | CRUD + `?hierarchy=true` + bulk assign + group members |
 | Farm APIs | ✅ Complete | Farm profile CRUD + add/update/delete crops (incl. `actualYield`, status) |
 | Collection APIs | ✅ Complete | CRUD with filters; auto `totalValue`; batch grouping endpoints |
@@ -219,9 +219,9 @@ No MVP module is at zero, but the following requirements are effectively unbuilt
 
 **Backend caveats (documented, not fixed):**
 - Collection price fallback reads `req.user.settings?.defaultPrices`, but `User` has no `settings` field — so the organisation's configured default crop prices are never actually applied (`collection.controller.js:75-83`). Collections without an explicit price record value 0.
-- Tenant (organisation) isolation is not enforced: most list/dashboard/report queries are global and not filtered by `organisationId` (`auth.middleware.js:46-49` documents this).
+- Tenant (organisation) isolation is enforced. Full from Phase 13: every request runs inside an AsyncLocalStorage tenant context (`auth.middleware.js`), and the `tenantScope` schema plugin auto-injects `organisationId` into all queries/aggregations and stamps it onto new documents, so list/dashboard/report/CRUD data is always scoped to the acting user's organisation. See sections 15/Status Update.
 - Overdue detection is manual (`GET /api/loans/overdue`) — no scheduled job.
-- Member delete is a **hard delete** and can orphan financial/history references.
+- Member deletion is a **soft delete** (`deletedAt` set, status → inactive); the document and its financial/visit references are retained and hidden from lists/counts/reports. An admin restore endpoint (`POST /api/members/:id/restore`) reverses it.
 - `reducing_balance` loan interest is implemented as simple pro-rated interest, not true reducing balance.
 - Several read endpoints (`members`, `payments`, `collections`, `farms`, `loans/:id`, `dashboard`) are open to any authenticated role including Field Officer.
 
@@ -376,7 +376,7 @@ Legend: ✅ fully complete · 🟡 partially complete · ❌ not complete. Audit
 |---|---|---|
 | 13 | Organisation model | ✅ |
 | 14 | Member model | ✅ |
-| 15 | Member CRUD API (incl. soft-delete) | 🟡 CRUD done; deletion is **hard delete**, not soft |
+| 15 | Member CRUD API (incl. soft-delete) | ✅ CRUD done; deletion is now a **soft delete** (`deletedAt`) with an admin restore endpoint |
 | 16 | Search & Filter | 🟡 Backend complete (search/status/groupId/crop/location); **group filter missing in UI** |
 | 17 | File upload middleware (photos, documents) | ✅ |
 | 18 | Bulk import (CSV/Excel) | ✅ |
@@ -522,14 +522,35 @@ See sections 5, 6, 10, 11, and 15. Summary of what is missing and what it would 
 ## 18. Discrepancies (documentation vs. codebase)
 
 - The Validation MVP implies orgs can be created/edited, but **no organisation UI exists**; only a seed-script organisation ("Sample Cooperative") plus the admin API.
-- The Build Plan specifies soft-delete for members; the implementation performs a **hard delete** (`member.controller.js:108-116`).
+- The Build Plan specifies soft-delete for members; the implementation now performs a **soft delete** (`deletedAt` + status → inactive) and hides deleted members from every list, count, dashboard aggregation, group member query, and report. Admin restore: `POST /api/members/:id/restore`.
 - The Build Plan specifies sky-blue `#0EA5E9`; the app theme uses teal primary (`#0F766E`) and blue secondary (`#2563EB`).
 - The frontend "Record Collection" actions are inconsistent: the Dashboard (field officer) button targets a **non-existent route** `/collections/new`, and the Collections page button navigates to `/members` instead of a collection form.
 - `recharts` and `json2csv` are installed but **unused** (no charts anywhere, no CSV export).
 - Backend "default crop price" fallback for collections is **dead code** (`req.user.settings` does not exist on User), so configured `Organisation.settings.defaultCropPrices` are never applied.
 - Several backend capabilities have **no frontend**: expenses, batches, tasks, loan creation/repayment, produce-payment trigger, per-member outstanding dues, officer performance, dashboard trend/breakdown/distribution, organisation management.
-- `AuthContext` + `User` schemas carry an `organisationId`, but list/dashboard/report queries are **not org-scoped** (multi-tenant data may be visible across organisations).
-- Frontend `mainCrops` are sent as a JSON-serialized string in a multipart field; the server stores the serialized string as a single array element rather than parsing it back (documented bug in `MemberNew.jsx:126-127`).
+- `AuthContext` + `User` schemas carry an `organisationId`, and list/dashboard/report queries are **now org-scoped** end to end (Phase 13): the `tenantScope` schema plugin enforces the tenant boundary on every query/aggregation and stamps `organisationId` on created documents. The `Crop` catalog remains a deliberately shared (non-tenant) reference list.
+- Member deletes are a **soft delete** (`deletedAt` + status → inactive) with an admin restore endpoint; see section 15.
+
+---
+
+## 19. Phase 13 — Tenant Isolation (delivered)
+
+Phase 13 closes the biggest post-audit gap: the schema was already multi-tenant, but nothing scoped data to an organisation. Now every authenticated request runs in an org context and cannot read or mutate another tenant's records.
+
+**How it works**
+- `server/src/utils/tenant.js` — AsyncLocalStorage that carries the acting user's `organisationId`.
+- `server/src/middleware/auth.middleware.js` — `protect` runs the request inside that context (`runWithOrg`).
+- `server/src/models/plugins/tenantScope.js` — auto-injects `organisationId` into every filter/aggregation, stamps it on new documents (create path), and blocks client-supplied `organisationId` in request bodies. Attached to all 12 tenant models (User, Member, Group, Collection, Payment, Loan, Expense, FieldVisit, Task, FarmProfile, Batch, AuditLog). `Organisation` and `Crop` are handled explicitly (own-org only / shared catalog).
+- `$lookup` aggregation joins (dashboard group names, officer performance) run in pipeline form with an organisation `$match` so joined data stays in-tenant.
+- Organisation endpoints (`GET/PUT/DELETE /organisations/:id`, list) now resolve foreign ids to 404 instead of leaking metadata.
+
+**Data migration** — `npm run migrate:tenant` (`server/src/migrate/backfill-tenant.js`) assigns every missing/null `organisationId` to the default tenant and creates per-tenant indexes. Idempotent and safe to re-run. Already applied to the live database (users, members, loans, visits, farms, etc.).
+
+**Also fixed along the way** — bulk member import (`POST /api/members/import`) was broken: `import("xlsx")` returned the namespace object, so `XLSX.readFile` was not a function (all three dynamic xlsx imports now use `.default`). Imports and the export go through the same tenant scoping; imports are stamped from the acting user's org, never the request body.
+
+**Verification** — a two-tenant isolation pass proved: creates stamped to the caller's tenant; body-supplied `organisationId` ignored; lists/search/stats scoped per tenant; cross-tenant GET/UPDATE/DELETE/org reads resolve to 404; soft-delete/restore unaffected. **28/28 tenant checks and 47/47 full-regression checks passed** (incl. all six CSV reports, import template/upload/xlsx export, user lifecycle, audit viewer, org settings). Probe data cleaned afterwards.
+
+**Remaining scope (next phases)** — workspaces/org switching UX, per-org admin self-service onboarding (no signup flow assigns an org yet — new self-registered officers await admin assignment), and the farmer-facing portal.
 
 ---
 
@@ -628,3 +649,13 @@ This audit report was written on **8 September 2026**, before Phases 9–11 were
 All Phase 11 verification (server boot on :5001, login, settings round-trip + validation rejection, audit writes on create/update/delete, filters, CSV export) passed **20/20**; probe data was cleaned up afterwards.
 
 For the accurate build-plan position, see section 15 (_Task 80 status now reflects the delivered work_).
+
+## Status Update — Cleanup Pass
+
+Delivered after Phases 9–12 (14 September 2026), addressing the documented loose ends:
+
+- **`mainCrops` multipart bug fixed** — the server now normalizes `mainCrops` from any incoming shape (JSON string, comma-separated text, or a real array) into a proper string array (`normalizeCrops` in `member.controller.js`). Verified end-to-end for create, update, and multipart vs JSON bodies.
+- **Member hard delete → soft delete** — `DELETE /api/members/:id` now sets `deletedAt` + status `inactive` instead of removing the document, so collections/payments/loans keep their references. Deleted members are excluded from every list, search, dashboard stat/aggregation, group member query, officer assignment, export, and report. New admin endpoint `POST /api/members/:id/restore` reverses it. Existing docs without the field still match `deletedAt: null`, so no migration was needed.
+- **Dead topbar UI replaced** — the topbar Search icon now opens a live global member search (debounced, top-5 results, click-through to profiles); the Notification bell opens an honest "No new notifications" panel (fake unread dot removed); the dead "Reset" password link on the login page is replaced with an "ask your admin" hint (there is no email/SMS reset flow yet — Phase 16).
+
+Cleanup regression: **33/33 passed** (boot, login, mainCrops parsing ×3, soft delete + stats exclusion + restore ×4, dashboard endpoints, group/collection/payment/visit/expense, all six CSV reports, audit, settings, probe-data cleanup).

@@ -1,3 +1,7 @@
+/*
+ * Modal - Animated overlay dialog with backdrop, escape-key close, and scroll lock.
+ * Props: open (boolean), onClose, title, children, size ('sm'|'md'|'lg'|'xl'), footer.
+ */
 import { X } from 'lucide-react'
 import { useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -29,9 +33,11 @@ export default function Modal({
   useEffect(() => {
     if (!open) return
     const handler = (e) => {
+      // Close the modal when the user presses the Escape key
       if (e.key === 'Escape') onClose()
     }
     document.addEventListener('keydown', handler)
+    // Lock body scroll while the modal is open to prevent background scrolling
     document.body.style.overflow = 'hidden'
     return () => {
       document.removeEventListener('keydown', handler)
@@ -48,8 +54,10 @@ export default function Modal({
 
   return (
     <AnimatePresence>
+      {/* AnimatePresence enables exit animations when `open` becomes false */}
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop overlay: clicking it triggers onClose */}
           <motion.div
             className="absolute inset-0 bg-dark/40 backdrop-blur-sm"
             variants={backdropVariants}

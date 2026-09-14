@@ -1,3 +1,8 @@
+/*
+ * Select - Styled native <select> dropdown with label, error state, and placeholder support.
+ * Props: label, error, options (array of strings or { value, label } objects),
+ *        placeholder (disabled first option), id, plus native select props.
+ */
 import { ChevronDown } from 'lucide-react'
 
 const Select = ({ label, error, options = [], placeholder, className = '', id, ...props }) => {
@@ -25,6 +30,7 @@ const Select = ({ label, error, options = [], placeholder, className = '', id, .
               {placeholder}
             </option>
           )}
+          {/* Support both plain string options and { value, label } objects */}
           {options.map((opt) => {
             const isObj = typeof opt === 'object'
             const value = isObj ? opt.value : opt
@@ -40,6 +46,7 @@ const Select = ({ label, error, options = [], placeholder, className = '', id, .
           <ChevronDown className="h-4 w-4 text-muted-light" />
         </div>
       </div>
+      {/* Conditional error message display */}
       {error && <p className="mt-1.5 text-xs font-medium text-danger">{error}</p>}
     </div>
   )

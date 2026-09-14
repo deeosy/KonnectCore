@@ -1,3 +1,8 @@
+// Members.jsx - Searchable, filterable, paginated member list.
+// Calls GET /members with search/status/crop/location/page filters, GET /members/export
+// (blob download), and POST /members/import (multipart upload).
+// Includes CSV/XLSX import-export, add/edit navigation, and a debounced search.
+
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -31,6 +36,8 @@ function useDebounce(value, delay) {
   return debouncedValue;
 }
 
+// Members - list page with filter, pagination, export, and import for member records.
+// Filter changes reset to page 1 so results stay consistent with the current query.
 export default function Members() {
   const navigate = useNavigate();
   const [members, setMembers] = useState([]);
@@ -49,6 +56,8 @@ export default function Members() {
   const loadMembers = useCallback(async () => {
     setLoading(true);
     try {
+      // Only include filters with a value; merge the debounced search term last
+      // so an empty search still clears the q param.
       const params = new URLSearchParams({ page, limit: 20 });
       Object.entries(filters).forEach(([k, v]) => {
         if (v) params.set(k, v);
@@ -78,6 +87,7 @@ export default function Members() {
     const params = new URLSearchParams();
     Object.entries(filters).forEach(([k, v]) => v && params.set(k, v));
     try {
+      // Request the workbook as a blob and trigger a browser download.
       const { data } = await api.get(`/members/export?${params.toString()}`, {
         responseType: "blob",
       });
@@ -106,6 +116,8 @@ export default function Members() {
             </Button>
             <Button
               onClick={() => {
+                // Programmatically open the file picker, then upload the chosen file
+                // as multipart form data to the import endpoint.
                 const input = document.createElement("input");
                 input.type = "file";
                 input.accept = ".csv,.xlsx";

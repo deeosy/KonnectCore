@@ -1,3 +1,11 @@
+// CollectionsPage.jsx - Produce collections list with a switched "Collections" / "Batches" view.
+// Collections: GET /collections with search/crop/from/to filters and limit=100;
+//   create/edit via CollectionModal (POST/PUT), delete via DELETE /collections/:id.
+//   Totals (count, weight, value) are derived from the loaded rows.
+// Batches: GET /collections/batches, POST /collections/batch/add, PUT/DELETE batch,
+//   GET /collections/batches/:id for detail, and GET /collections?batchId=none for unassigned.
+// The `autoOpen` prop (route "/collections/new") opens the record-collection modal on mount.
+
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Scale, Coins, Package, Boxes, Pencil, Trash2, Plus, Search } from 'lucide-react'
@@ -16,8 +24,11 @@ import CollectionModal from '../components/collections/CollectionModal'
 import { formatCurrency, formatDate, formatNumber } from '../utils/format'
 import { CROPS } from '../utils/constants'
 
+// BATCH_STATUSES - lifecycle states for a shipping batch.
 const BATCH_STATUSES = ['open', 'closed', 'shipped', 'delivered']
 
+// CollectionsPage - main page component; owns both the collections table and batch sub-view.
+// view is initialized from the ?view=batches query param so URLs can deep-link a tab.
 function CollectionsPage({ autoOpen }) {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -71,6 +82,7 @@ function CollectionsPage({ autoOpen }) {
     if (view === 'batches') loadBatches()
   }, [view, loadBatches])
 
+  // totals - derived aggregates (count / total weight / total value) over the loaded rows.
   const totals = collections.reduce(
     (acc, c) => {
       acc.count += 1
@@ -300,6 +312,7 @@ function CollectionsPage({ autoOpen }) {
   )
 }
 
+// BatchView - table listing shipping batches with view/edit/delete actions.
 function BatchView({ batches, loadBatches, onNew, onDetail, onEdit, onDelete }) {
   return (
     <div className="overflow-hidden rounded-3xl border border-border bg-surface shadow-card">
@@ -355,6 +368,8 @@ function BatchView({ batches, loadBatches, onNew, onDetail, onEdit, onDelete }) 
   )
 }
 
+// BatchCreateModal - creates a batch by selecting "unassigned" collections
+// (fetched via GET /collections?batchId=none) and POSTing /collections/batch/add.
 function BatchCreateModal({ open, onClose, onSaved }) {
   const [form, setForm] = useState({ batchNumber: '', collectionPoint: '', buyer: '' })
   const [unassigned, setUnassigned] = useState([])
@@ -446,6 +461,7 @@ function BatchCreateModal({ open, onClose, onSaved }) {
   )
 }
 
+// BatchDetailModal - fetches and displays the full collection list inside a batch.
 function BatchDetailModal({ batchDetail, onClose, onEdit }) {
   const [data, setData] = useState(null)
 
@@ -511,6 +527,7 @@ function BatchDetailModal({ batchDetail, onClose, onEdit }) {
   )
 }
 
+// BatchEditModal - updates batch status, point, buyer, and certification via PUT.
 function BatchEditModal({ batch, onClose, onSaved }) {
   const [form, setForm] = useState({ status: 'open', collectionPoint: '', buyer: '', certification: '' })
   const [loading, setLoading] = useState(false)
@@ -565,6 +582,7 @@ function BatchEditModal({ batch, onClose, onSaved }) {
   )
 }
 
+// deleteBatch - standalone helper that deletes a batch and refreshes both lists.
 async function deleteBatch(batch, loadBatches, loadCollections, close) {
   try {
     await api.delete(`/collections/batches/${batch._id}`)
@@ -577,6 +595,7 @@ async function deleteBatch(batch, loadBatches, loadCollections, close) {
   }
 }
 
+// DeleteConfirmModal - generic confirm-delete dialog reused by collections and batches.
 function DeleteConfirmModal({ open, title, message, onClose, onConfirm }) {
   return (
     <Modal

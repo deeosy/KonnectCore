@@ -10,6 +10,9 @@ import { formatCurrency } from '../../utils/format'
 import { CROPS as DEFAULT_CROPS, QUALITY_GRADES } from '../../utils/constants'
 import { required, positive, requiredDate } from '../../utils/validate'
 
+// Convert a date to the yyyy-mm-dd format required by <input type="date">.
+// Note: toISOString() converts to UTC first, so this shifts local dates near
+// midnight (back-dating); acceptable here as the API stores the date as-is.
 const dateInputValue = (date) => {
   if (!date) return ''
   const d = new Date(date)
@@ -55,11 +58,14 @@ export default function CollectionModal({ open, onClose, onSaved, member, collec
       ? `${member.firstName} ${member.lastName}`
       : ''
 
+  // Merge the static default crop list with any crops configured in the
+  // organisation catalog (Set dedupes names), so dropdown shows live options.
   const crops = useMemo(() => {
     const names = new Set([...DEFAULT_CROPS, ...catalogCrops])
     return [...names]
   }, [catalogCrops])
 
+  // Use org-specific quality grades when set, otherwise fall back to defaults.
   const grades = useMemo(() => {
     const list = orgSettings?.qualityGrades?.length ? orgSettings.qualityGrades : QUALITY_GRADES.map((g) => g.value)
     return list.map((g) => ({ value: g, label: g === 'premium' ? 'Premium' : g === 'standard' ? 'Standard' : g === 'reject' ? 'Reject' : `Grade ${g}` }))
@@ -120,6 +126,8 @@ export default function CollectionModal({ open, onClose, onSaved, member, collec
     setErrors({})
   }, [open, collection, member])
 
+  // Auto-fill price when a crop is chosen, but never overwrite a price the user
+  // typed manually (tracked via the manualPrice ref flag).
   const applyDefaultPrice = (crop, current = '') => {
     if (manualPrice.current && current !== '') return
     const price = orgSettings?.defaultCropPrices?.[crop]
@@ -150,6 +158,7 @@ export default function CollectionModal({ open, onClose, onSaved, member, collec
 
   const selectedMember = memberResults.find((m) => m._id === form.memberId)
 
+  // Live total = quantity * unit price, shown in the summary footer.
   const totalValue = (Number(form.quantity) || 0) * (Number(form.pricePerUnit) || 0)
 
   const submit = async () => {
@@ -163,6 +172,8 @@ export default function CollectionModal({ open, onClose, onSaved, member, collec
     if (Object.values(nextErrors).some((v) => v)) return
     setSaving(true)
     try {
+      // Build a multipart FormData body so the optional photo file uploads
+      // along with the plain text fields.
       const fd = new FormData()
       Object.entries(form).forEach(([k, v]) => {
         if (v !== '' && v != null) fd.append(k, v)

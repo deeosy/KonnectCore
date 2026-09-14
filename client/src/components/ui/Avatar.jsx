@@ -1,3 +1,8 @@
+/*
+ * Avatar - User avatar that renders an image or falls back to initials on a colored background.
+ * Props: name (used for initials and deterministic color), src (image URL),
+ *        size ('sm'|'md'|'lg'|'xl').
+ */
 import { initials } from '../../utils/format'
 
 const sizeClasses = {
@@ -16,6 +21,7 @@ const colorClasses = [
   'bg-dark text-white',
 ]
 
+// Deterministically pick a background color from the pool based on a hash of the name.
 function getColorFromName(name = '') {
   let hash = 0
   for (let i = 0; i < name.length; i++) {
