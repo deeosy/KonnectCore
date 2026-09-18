@@ -3,10 +3,10 @@
 import axios from "axios";
 
 // The JWT is stored in localStorage and attached to every request via the
-// request interceptor below. The baseURL ('/api') is proxied to the backend
-// by the Vite dev server (see vite.config.js), so no absolute URL is needed.
+// request interceptor below. The baseURL is proxied to the backend
+// by the Vite dev server in development, or set via VITE_API_URL in production.
 const api = axios.create({
-  baseURL: "/api",
+  baseURL: import.meta.env.VITE_API_URL || "/api",
   headers: {
     "Content-Type": "application/json",
   },
