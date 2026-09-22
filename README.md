@@ -659,3 +659,76 @@ Delivered after Phases 9–12 (14 September 2026), addressing the documented loo
 - **Dead topbar UI replaced** — the topbar Search icon now opens a live global member search (debounced, top-5 results, click-through to profiles); the Notification bell opens an honest "No new notifications" panel (fake unread dot removed); the dead "Reset" password link on the login page is replaced with an "ask your admin" hint (there is no email/SMS reset flow yet — Phase 16).
 
 Cleanup regression: **33/33 passed** (boot, login, mainCrops parsing ×3, soft delete + stats exclusion + restore ×4, dashboard endpoints, group/collection/payment/visit/expense, all six CSV reports, audit, settings, probe-data cleanup).
+
+---
+
+# Status Update — Multi-Cooperative Onboarding, Isolation & What's Left
+
+**16 September 2026** — Read-only analysis of the codebase and README to answer: how Coop A and Coop B share this platform, who gives them their logins, how their workspaces stay isolated, and what work remains.
+
+## 1. Tenant isolation — the walls ARE built
+
+Two organisations using the same platform cannot see each other's data. This is enforced server-side at the database layer, never only in the UI:
+
+- `server/src/utils/tenant.js` — `AsyncLocalStorage` carries the acting user's `organisationId`.
+- `server/src/middleware/auth.middleware.js:44` — `protect` runs every authenticated request inside `runWithOrg(user.organisationId ?? null)`.
+- `server/src/models/plugins/tenantScope.js` — auto-injects `{ organisationId }` into every query filter/aggregation and stamps it onto every new document, for all 12 tenant models (User, Member, Group, Collection, Payment, Loan, Expense, FieldVisit, Task, FarmProfile, Batch, AuditLog).
+- `server/src/controllers/organisation.controller.js:140-154` — foreign organisation ids resolve to **404**, not enumeration leaks.
+
+**Consequence:** a Coop-B user physically cannot read or mutate a Coop-A row. Data isolation between cooperatives is complete. What is missing is the *onboarding/workspace UX* around it.
+
+## 2. The "superadmin" — it does not exist yet
+
+There is **no platform-owner / superadmin role** in the system. The only roles are `admin | manager | fieldOfficer` (`server/src/models/User.js:36-40`), and every admin is an *organisation-level* admin, not a platform owner.
+
+| Who | What they can do today | How |
+|---|---|---|
+| Platform owner (you) | Create the first org + its admin via seed; create more orgs via API/DB only | `npm run seed` creates "Sample Cooperative" + `admin@konnectcore.com / admin123`; re-run with `SEED_TEST_ORG=1` creates "Test Cooperative" + `test.manager@konnectcore.com / password123` |
+| Coop admin | Creates its own managers/officers | `/users` page → New User → role → default password `password123` |
+| Self-registered officer | `POST /api/auth/register` is public, but always creates a `fieldOfficer` **with no organisation** — they see empty data until an admin assigns them an org | `server/src/controllers/auth.controller.js:30-36` |
+
+**Who sends the logins today:** no invite/email flow exists. Credentials are assigned by the person who creates the account (the platform owner for a new coop, or the coop's admin for staff) and must be communicated manually. Login settings can be reset only by an admin — there is no forgot-password/reset flow yet (Phase 16).
+
+**Key onboarding gap:** `createUser` (`server/src/controllers/user.controller.js`) does not accept `organisationId` from the request body — the `tenantScope` plugin stamps it from the **acting admin's org**. So a Coop-A admin creating a user always places them in Coop A, and Coop B's first staff cannot be created through the normal Users page. Onboarding a brand-new cooperative currently requires the seed script or a direct DB/API write.
+
+## 3. How to onboard Coop A and Coop B today (current built-in path)
+
+1. `npm run install:all`, configure `server/.env`, `npm run seed` → installs **Coop A** ("Sample Cooperative") with admin login.
+2. For a second tenant, re-run the seeder with `SEED_TEST_ORG=1` (`server/src/seed.js:72`) → creates **Coop B** ("Test Cooperative") + `test.manager@konnectcore.com / password123`.
+3. Log in as both and verify isolation: Coop-A admin sees only Sample Cooperative stats/members; the Test manager sees only Test Cooperative data; cross-tenant ids return 404.
+
+For real (non-test) second cooperatives, the same result is achievable via `POST /api/organisations` (admin, `organisation.controller.js:158`) plus assigning the new coop's first staff their `organisationId` directly — but there is no UI or self-service flow for this yet.
+
+## 4. Workspaces — what exists vs what's missing
+
+- **Exists:** every user's data is always scoped to their own org; the admin **Settings** page (`/settings`) edits only the calling user's org (`SettingsPage.jsx:32-33`).
+- **Missing:** a create-organisation / workspace page, an org switcher, the active organisation shown in the sidebar/topbar, and self-service onboarding for a new cooperative, its first admin, and org-less self-registered officers.
+
+## 5. Remaining work — current, prioritized list
+
+**Onboarding & workspace (highest priority for the multi-cooperative story):**
+1. **Platform-owner / superadmin role + tenant-provisioning workflow** — a system-level admin who creates organisations *and* assigns their first admin. Today `createUser` ignores body `organisationId`, so a new coop's first staff can't be made from Coop-A's Users page.
+2. **Workspace / organisation management page** — create org, switch org, active org name in sidebar/topbar (backend `POST /api/organisations` exists; no UI).
+3. **Onboard org-less officers** — assign self-registered officers to an organisation.
+
+**Phase 14 — Role experience split:**
+4. Manager dashboard scoped to their region/groups; field officers see only their assigned members everywhere; server-side role restrictions on several reads currently open to any authenticated role; role-aware post-login redirect.
+
+**Small MVP UI gaps still open:**
+5. Member group filter on `/members`; group "assign members" UI; organisation hierarchy tree view.
+6. Farm-details form, planting-date input, actual-yield/crop-status updates.
+7. Collection date picker (back-dating).
+8. Per-member outstanding-dues page.
+9. Loan request + repayment UI.
+10. Batch-management UI.
+11. Admin crop-reference management page (crops are DB-seeded but not manageable in the UI).
+
+**Beyond MVP (Proposed Features):**
+12. Farmer portal — `farmer` role in the User enum, link Member↔User, "grant portal access" toggle, phone + PIN/OTP login, farmer dashboard.
+13. Communication — real SMS gateway (Hubtel/Africa's Talking), templates, receipts, reminders, bulk SMS; email; forgot-password/reset flow.
+14. Financial statements (income statement, balance sheet, cash flow) + PDF export; batch traceability & certifications.
+15. Offline-first sync (IndexedDB queue for field officers) + mobile-money/bank integrations.
+16. Read-only NGO / Government / Partner multi-org view (donor/impact reporting, API keys).
+
+**Housekeeping:**
+17. Automated test suite + CI — the E2E regression numbers (34/34, 47/47, 33/33) are from manual verification runs documented in this README; there are no committed test files or a `test` script yet.

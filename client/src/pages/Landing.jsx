@@ -119,11 +119,20 @@ function Navbar({ scrollTo }) {
 
   useEffect(() => {
     const ids = Object.values(SECTIONS)
+    const anchor = () => window.scrollY + 140
     const onScroll = () => {
+      const line = anchor()
       let current = ''
+      let currentTop = -Infinity
       for (const id of ids) {
         const el = document.getElementById(id)
-        if (el && el.getBoundingClientRect().top <= 140) current = id
+        if (el) {
+          const top = el.getBoundingClientRect().top + window.scrollY
+          if (top <= line && top > currentTop) {
+            currentTop = top
+            current = id
+          }
+        }
       }
       setActive(current)
     }
@@ -168,14 +177,7 @@ function Navbar({ scrollTo }) {
           ))}
         </nav>
 
-        <div className="flex items-center gap-3">
-          <a
-            href="/login"
-            className="group hidden items-center gap-2 rounded-full border border-primary/60 px-6 py-2.5 text-sm font-semibold text-primary transition-all hover:bg-primary hover:text-white md:inline-flex"
-          >
-            Sign in
-            <FiArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-          </a>
+        {/* <div className="flex items-center gap-3">
           <button
             onClick={() => setMenuOpen((v) => !v)}
             className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-white text-dark lg:hidden"
@@ -183,10 +185,10 @@ function Navbar({ scrollTo }) {
           >
             {menuOpen ? <IoCloseOutline className="h-5 w-5" /> : <IoMenuOutline className="h-5 w-5" />}
           </button>
-        </div>
+        </div> */}
       </div>
 
-      {menuOpen && (
+      {/* {menuOpen && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -206,11 +208,8 @@ function Navbar({ scrollTo }) {
               </motion.button>
             ))}
           </div>
-          <a href="/login" className="mt-5 flex items-center justify-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white">
-            Sign in to KonnectCore <FiArrowUpRight className="h-4 w-4" />
-          </a>
         </motion.div>
-      )}
+      )} */}
     </motion.header>
   )
 }
@@ -307,7 +306,7 @@ function Hero({ scrollTo }) {
             transition={{ delay: 0.5, duration: 1.2, ease: EASE }}
             className="relative hidden lg:col-span-5 lg:block"
           >
-            <div className="relative h-[540px] overflow-hidden rounded-[4em] bg-border shadow-2xl shadow-dark/20 xl:h-[580px]">
+            <div className="relative h-135 overflow-hidden rounded-[4em] bg-border shadow-2xl shadow-dark/20 xl:h-145">
               <motion.img
                 src={FEATURE_IMG}
                 alt=""
@@ -317,7 +316,7 @@ function Hero({ scrollTo }) {
                 transition={{ duration: 1.8, ease: EASE }}
                 className="h-full w-full object-cover"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-dark/40 to-transparent" />
+              <div className="absolute inset-0 bg-linear-to-t from-dark/40 to-transparent" />
             </div>
 
             <Reveal delay={0.3} className="absolute -bottom-8 -left-10">
